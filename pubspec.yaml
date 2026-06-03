@@ -12,6 +12,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^1.6.0
   flutter_dotenv: ^6.0.1
+  carousel_slider: ^5.1.2
 
 dev_dependencies:
   flutter_test:
@@ -23,3 +24,4 @@ flutter:
   
   assets:
     - .env
+    - assets/images/
