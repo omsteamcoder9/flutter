@@ -54,30 +54,28 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
     _timer.cancel();
     super.dispose();
   }
-String _getImageUrl(dynamic product) {
-  final imgBaseUrl = widget.imageBaseUrl;
-  
-  // PRIORITY 1: Get image from variants (FIRST)
-  if (product['variants'] != null && product['variants'].isNotEmpty) {
-    final variant = product['variants'][0];
-    if (variant['images'] != null && variant['images'].isNotEmpty) {
-      String imagePath = variant['images'][0]['image'];
-      if (imagePath.startsWith('http')) return imagePath;
+
+  String _getImageUrl(dynamic product) {
+    final imgBaseUrl = widget.imageBaseUrl;
+    
+    if (product['variants'] != null && product['variants'].isNotEmpty) {
+      final variant = product['variants'][0];
+      if (variant['images'] != null && variant['images'].isNotEmpty) {
+        String imagePath = variant['images'][0]['image'];
+        if (imagePath.startsWith('http')) return imagePath;
+        if (imagePath.startsWith('/')) imagePath = imagePath.substring(1);
+        return '$imgBaseUrl/$imagePath';
+      }
+    }
+    
+    if (product['ogImage'] != null && product['ogImage'].toString().isNotEmpty) {
+      String imagePath = product['ogImage'];
       if (imagePath.startsWith('/')) imagePath = imagePath.substring(1);
-      // DO NOT remove 'uploads/'
       return '$imgBaseUrl/$imagePath';
     }
+    
+    return '';
   }
-  
-  // PRIORITY 2: Fallback to ogImage
-  if (product['ogImage'] != null && product['ogImage'].toString().isNotEmpty) {
-    String imagePath = product['ogImage'];
-    if (imagePath.startsWith('/')) imagePath = imagePath.substring(1);
-    return '$imgBaseUrl/$imagePath';
-  }
-  
-  return '';
-}
 
   String _getProductName(dynamic product) {
     String name = product['name'] ?? 'Seafood';
@@ -126,14 +124,14 @@ String _getImageUrl(dynamic product) {
   Widget build(BuildContext context) {
     if (widget.products.isEmpty) {
       return Container(
-        height: 400,
+        height: 350,
         color: const Color(0xFF5E0006),
         child: const Center(
           child: SizedBox(
-            width: 32,
-            height: 32,
+            width: 28,
+            height: 28,
             child: CircularProgressIndicator(
-              strokeWidth: 3,
+              strokeWidth: 2,
               valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD53E0F)),
             ),
           ),
@@ -150,111 +148,215 @@ String _getImageUrl(dynamic product) {
     return Container(
       width: double.infinity,
       color: const Color(0xFF5E0006),
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // IMAGE SECTION - Top Center
-              AnimatedOpacity(
-                opacity: _entranceAnimationDone ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 800),
-                child: AnimatedSlide(
-                  offset: _entranceAnimationDone ? Offset.zero : const Offset(0, -0.1),
-                  duration: const Duration(milliseconds: 800),
-                  child: _buildCircularImage(imageUrl, _currentSlide),
-                ),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Image Section
+          AnimatedOpacity(
+            opacity: _entranceAnimationDone ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 600),
+            child: _buildCircularImage(imageUrl, _currentSlide),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Content Card
+          AnimatedOpacity(
+            opacity: _entranceAnimationDone ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 600),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
               ),
-              
-              const SizedBox(height: 20),
-              
-              // CONTENT SECTION - Pill Container with Backdrop Blur (Full rounded)
-              AnimatedOpacity(
-                opacity: _entranceAnimationDone ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 800),
-                child: AnimatedSlide(
-                  offset: _entranceAnimationDone ? Offset.zero : const Offset(0, 0.1),
-                  duration: const Duration(milliseconds: 800),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(40),
-                    child: BackdropFilter(
-                      filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                      child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF9B0F06).withOpacity(0.8),
-                          border: Border.all(
-                            color: const Color(0xFFD53E0F).withOpacity(0.3),
-                          ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Product Name
+                  TweenAnimationBuilder(
+                    key: ValueKey('name_$_currentSlide'),
+                    tween: Tween<double>(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 400),
+                    builder: (context, value, child) {
+                      return Opacity(
+                        opacity: value,
+                        child: Transform.translate(
+                          offset: Offset(0, 10 * (1 - value)),
+                          child: child,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Animated Text Content
-                              _buildAnimatedText(
-                                productName: productName,
-                                discountedPrice: discountedPrice,
-                                currentSlide: _currentSlide,
+                      );
+                    },
+                    child: Text(
+                      productName,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF5E0006),
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 8),
+                  
+                  // Price
+                  TweenAnimationBuilder(
+                    key: ValueKey('price_$_currentSlide'),
+                    tween: Tween<double>(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 400),
+                    builder: (context, value, child) {
+                      return Opacity(
+                        opacity: value,
+                        child: Transform.translate(
+                          offset: Offset(0, 10 * (1 - value)),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Text(
+                      _formatPrice(discountedPrice),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFD53E0F),
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // Description
+                  TweenAnimationBuilder(
+                    key: ValueKey('desc_$_currentSlide'),
+                    tween: Tween<double>(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 400),
+                    builder: (context, value, child) {
+                      return Opacity(
+                        opacity: value,
+                        child: Transform.translate(
+                          offset: Offset(0, 10 * (1 - value)),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Text(
+                      'Fresh premium quality seafood delivered to your doorstep',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // View More Button
+                  TweenAnimationBuilder(
+                    key: ValueKey('button_$_currentSlide'),
+                    tween: Tween<double>(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 400),
+                    builder: (context, value, child) {
+                      return Opacity(
+                        opacity: value,
+                        child: Transform.translate(
+                          offset: Offset(0, 10 * (1 - value)),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: GestureDetector(
+                      onTap: () {},
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF5E0006),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'VIEW DETAILS',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1,
+                                color: Colors.white,
                               ),
-                              const SizedBox(height: 20),
-                              // Dot Indicators
-                              _buildDotIndicators(),
-                            ],
-                          ),
+                            ),
+                            SizedBox(width: 8),
+                            Icon(
+                              Icons.arrow_forward,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Dot Indicators
+                  _buildDotIndicators(),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildCircularImage(String imageUrl, int slideIndex) {
     return SizedBox(
-      width: 140,
-      height: 140,
+      width: 120,
+      height: 120,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Glow effect
           Container(
-            width: 140,
-            height: 140,
+            width: 120,
+            height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFD53E0F).withOpacity(0.15),
-                  blurRadius: 30,
-                  spreadRadius: 5,
+                  color: const Color(0xFFD53E0F).withOpacity(0.2),
+                  blurRadius: 20,
+                  spreadRadius: 2,
                 ),
               ],
             ),
           ),
-          // Border
           Container(
-            width: 140,
-            height: 140,
+            width: 120,
+            height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: const Color(0xFFEED9B9).withOpacity(0.2),
-                width: 4,
+                color: Colors.white.withOpacity(0.3),
+                width: 3,
               ),
             ),
             child: ClipOval(
               child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 800),
+                duration: const Duration(milliseconds: 600),
                 child: KeyedSubtree(
                   key: ValueKey(slideIndex),
                   child: imageUrl.isNotEmpty
@@ -267,7 +369,7 @@ String _getImageUrl(dynamic product) {
                               child: const Icon(
                                 Icons.image_not_supported,
                                 color: Color(0xFFD53E0F),
-                                size: 40,
+                                size: 35,
                               ),
                             );
                           },
@@ -277,63 +379,42 @@ String _getImageUrl(dynamic product) {
                           child: const Icon(
                             Icons.image,
                             color: Color(0xFFD53E0F),
-                            size: 40,
+                            size: 35,
                           ),
                         ),
                 ),
               ),
             ),
           ),
-          // Fresh badge (100%)
+          // Fresh Badge
           Positioned(
-            bottom: -8,
-            left: -8,
+            bottom: -6,
+            right: -6,
             child: Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF5E0006).withOpacity(0.9),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFD53E0F).withOpacity(0.3)),
+                color: const Color(0xFFD53E0F),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 8,
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFD53E0F)),
+                  Icon(Icons.fiber_manual_record, size: 8, color: Colors.white),
+                  SizedBox(width: 4),
+                  Text(
+                    'FRESH',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'FRESH',
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFD53E0F),
-                        ),
-                      ),
-                      Text(
-                        '100%',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFD53E0F),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -341,177 +422,6 @@ String _getImageUrl(dynamic product) {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildAnimatedText({
-    required String productName,
-    required double discountedPrice,
-    required int currentSlide,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // "Fresh & Delicious" - Slide animation
-        TweenAnimationBuilder(
-          key: ValueKey('subtitle_$currentSlide'),
-          tween: Tween<double>(begin: 0, end: 1),
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeOutCubic,
-          builder: (context, value, child) {
-            return Opacity(
-              opacity: value,
-              child: Transform.translate(
-                offset: Offset(0, 20 * (1 - value)),
-                child: child,
-              ),
-            );
-          },
-          child: const Text(
-            'Fresh & Delicious',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w300,
-              letterSpacing: -0.5,
-              color: Colors.white,
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-
-        // "SEAFOOD" - Slide animation
-        TweenAnimationBuilder(
-          key: ValueKey('title_$currentSlide'),
-          tween: Tween<double>(begin: 0, end: 1),
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeOutCubic,
-          builder: (context, value, child) {
-            return Opacity(
-              opacity: value,
-              child: Transform.translate(
-                offset: Offset(0, 20 * (1 - value)),
-                child: child,
-              ),
-            );
-          },
-          child: const Text(
-            'SEAFOOD',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w400,
-              fontStyle: FontStyle.italic,
-              letterSpacing: 1,
-              color: Color(0xFFEED9B9),
-              fontFamily: 'Georgia',
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Description - Slide animation
-        TweenAnimationBuilder(
-          key: ValueKey('desc_$currentSlide'),
-          tween: Tween<double>(begin: 0, end: 1),
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeOutCubic,
-          builder: (context, value, child) {
-            return Opacity(
-              opacity: value,
-              child: Transform.translate(
-                offset: Offset(0, 20 * (1 - value)),
-                child: child,
-              ),
-            );
-          },
-          child: Text(
-            'Enjoy premium ocean-fresh seafood with healthy delicious ${productName.toLowerCase()} from ${_formatPrice(discountedPrice)}.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 13,
-              height: 1.4,
-              color: Color(0xFFEED9B9),
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // View More Button - Slide animation
-        TweenAnimationBuilder(
-          key: ValueKey('button_$currentSlide'),
-          tween: Tween<double>(begin: 0, end: 1),
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeOutCubic,
-          builder: (context, value, child) {
-            return Opacity(
-              opacity: value,
-              child: Transform.translate(
-                offset: Offset(0, 20 * (1 - value)),
-                child: child,
-              ),
-            );
-          },
-          child: MouseRegion(
-            onEnter: (_) => setState(() => _isHoveringButton = true),
-            onExit: (_) => setState(() => _isHoveringButton = false),
-            child: GestureDetector(
-              onTap: () {
-                // Navigate to product detail
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                transform: _isHoveringButton ? Matrix4.translationValues(0, -2, 0) : Matrix4.identity(),
-                child: Container(
-                  padding: const EdgeInsets.only(left: 20, right: 8, top: 8, bottom: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF5E0006),
-                    borderRadius: BorderRadius.circular(40),
-                    border: Border.all(color: const Color(0xFFD53E0F).withOpacity(0.3)),
-                    boxShadow: _isHoveringButton
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFFD53E0F).withOpacity(0.2),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'VIEW MORE',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2,
-                          color: Color(0xFFEED9B9),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: _isHoveringButton ? Colors.white : const Color(0xFFD53E0F),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          Icons.arrow_forward,
-                          size: 12,
-                          color: const Color(0xFF5E0006),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -529,15 +439,15 @@ String _getImageUrl(dynamic product) {
             });
           },
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 250),
             margin: const EdgeInsets.symmetric(horizontal: 4),
-            width: _currentSlide == index ? 24 : 8,
-            height: 4,
+            width: _currentSlide == index ? 20 : 6,
+            height: 6,
             decoration: BoxDecoration(
               color: _currentSlide == index
                   ? const Color(0xFFD53E0F)
                   : const Color(0xFFD53E0F).withOpacity(0.3),
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(3),
             ),
           ),
         );
