@@ -17,6 +17,115 @@ class ApiService {
     return url;
   }
   
+  // Helper method for GET requests with optional auth
+  static Future<dynamic> getWithAuth(String endpoint, {String? token}) async {
+    try {
+      final url = '$baseUrl$endpoint';
+      print('BASE_URL = $baseUrl');
+      print('REQUEST URL: $url');
+      
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+      
+      final response = await http
+          .get(Uri.parse(url), headers: headers)
+          .timeout(const Duration(seconds: 10));
+      
+      print('STATUS CODE: ${response.statusCode}');
+      print('BODY: ${response.body}');
+      
+      try {
+        final decoded = jsonDecode(response.body);
+        return decoded;
+      } catch (e) {
+        return response.body;
+      }
+    } catch (e) {
+      print('HTTP ERROR: $e');
+      rethrow;
+    }
+  }
+  
+  // Helper method for POST requests with optional auth
+  static Future<dynamic> postWithAuth(String endpoint, dynamic data, {String? token}) async {
+    try {
+      final url = '$baseUrl$endpoint';
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+      
+      final response = await http
+          .post(Uri.parse(url),
+              headers: headers,
+              body: jsonEncode(data))
+          .timeout(const Duration(seconds: 10));
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('POST ERROR: $e');
+      rethrow;
+    }
+  }
+  
+  // Helper method for PUT requests with optional auth
+  static Future<dynamic> putWithAuth(String endpoint, dynamic data, {String? token}) async {
+    try {
+      final url = '$baseUrl$endpoint';
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+      
+      final response = await http
+          .put(Uri.parse(url),
+              headers: headers,
+              body: jsonEncode(data))
+          .timeout(const Duration(seconds: 10));
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('PUT ERROR: $e');
+      rethrow;
+    }
+  }
+  
+static Future<dynamic> deleteWithAuth(String endpoint, {Map<String, dynamic>? body, String? token}) async {
+  try {
+    final url = '$baseUrl$endpoint';
+    final Map<String, String> headers = {};
+    
+    // Only add Content-Type if there is a body
+    if (body != null) {
+      headers['Content-Type'] = 'application/json';
+    }
+    
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    
+    final request = http.Request('DELETE', Uri.parse(url));
+    request.headers.addAll(headers);
+    if (body != null) {
+      request.body = jsonEncode(body);
+    }
+    
+    final response = await request.send().timeout(const Duration(seconds: 10));
+    final responseBody = await response.stream.bytesToString();
+    
+    return jsonDecode(responseBody);
+  } catch (e) {
+    print('DELETE ERROR: $e');
+    rethrow;
+  }
+}
+  
   static Future<dynamic> get(String endpoint) async {
     try {
       final url = '$baseUrl$endpoint';
@@ -188,15 +297,16 @@ class ApiService {
     }
   }
   
-  // ========== CART METHODS ==========
+  // ========== CART METHODS WITH TOKEN SUPPORT ==========
   
-  static Future<dynamic> getCart({String? guestId}) async {
+  static Future<dynamic> getCart({String? guestId, String? token}) async {
     try {
       String endpoint = '/cart';
-      if (guestId != null && guestId.isNotEmpty) {
+      // Only use guestId in query if no token and guestId exists
+      if (guestId != null && guestId.isNotEmpty && (token == null || token.isEmpty)) {
         endpoint = '/cart?guestId=$guestId';
       }
-      final response = await get(endpoint);
+      final response = await getWithAuth(endpoint, token: token);
       return response;
     } catch (e) {
       print('Error fetching cart: $e');
@@ -204,13 +314,13 @@ class ApiService {
     }
   }
   
-  static Future<dynamic> updateCartItem(String itemId, int quantity, {String? guestId}) async {
+  static Future<dynamic> updateCartItem(String itemId, int quantity, {String? guestId, String? token}) async {
     try {
       final Map<String, dynamic> body = {'quantity': quantity};
-      if (guestId != null && guestId.isNotEmpty) {
+      if (guestId != null && guestId.isNotEmpty && (token == null || token.isEmpty)) {
         body['guestId'] = guestId;
       }
-      final response = await put('/cart/items/$itemId', body);
+      final response = await putWithAuth('/cart/items/$itemId', body, token: token);
       return response;
     } catch (e) {
       print('Error updating cart item: $e');
@@ -218,38 +328,57 @@ class ApiService {
     }
   }
   
-  static Future<dynamic> removeCartItem(String itemId, {String? guestId}) async {
-    try {
-      final Map<String, dynamic>? body = guestId != null ? {'guestId': guestId} : null;
-      final response = await deleteWithBody('/cart/items/$itemId', body);
+ static Future<dynamic> removeCartItem(String itemId, {String? guestId, String? token}) async {
+  try {
+    // If logged in (token exists), don't send any body
+    if (token != null && token.isNotEmpty) {
+      final response = await deleteWithAuth('/cart/items/$itemId', body: null, token: token);
       return response;
-    } catch (e) {
-      rethrow;
     }
+    
+    // For guest users, send guestId in body
+    final Map<String, dynamic>? body = (guestId != null && guestId.isNotEmpty) 
+        ? {'guestId': guestId} 
+        : null;
+    final response = await deleteWithAuth('/cart/items/$itemId', body: body, token: null);
+    return response;
+  } catch (e) {
+    rethrow;
   }
+}
   
-  static Future<dynamic> clearCart({String? guestId}) async {
-    try {
-      final Map<String, dynamic>? body = guestId != null ? {'guestId': guestId} : null;
-      final response = await deleteWithBody('/cart', body);
+static Future<dynamic> clearCart({String? guestId, String? token}) async {
+  try {
+    // If logged in (token exists), don't send any body
+    if (token != null && token.isNotEmpty) {
+      final response = await deleteWithAuth('/cart', body: null, token: token);
       return response;
-    } catch (e) {
-      print('Error clearing cart: $e');
-      rethrow;
     }
+    
+    // For guest users, send guestId in body
+    final Map<String, dynamic>? body = (guestId != null && guestId.isNotEmpty) 
+        ? {'guestId': guestId} 
+        : null;
+    final response = await deleteWithAuth('/cart', body: body, token: null);
+    return response;
+  } catch (e) {
+    print('Error clearing cart: $e');
+    rethrow;
   }
+}
 
-  static Future<dynamic> addToCart(String productId, int quantity, String variantId, {String? guestId}) async {
+  static Future<dynamic> addToCart(String productId, int quantity, String variantId, {String? guestId, String? token}) async {
     try {
       final Map<String, dynamic> body = {
         'productId': productId,
         'quantity': quantity,
         'variantId': variantId,
       };
-      if (guestId != null && guestId.isNotEmpty) {
+      if (guestId != null && guestId.isNotEmpty && (token == null || token.isEmpty)) {
         body['guestId'] = guestId;
       }
-      final response = await post('/cart', body);
+      
+      final response = await postWithAuth('/cart', body, token: token);
       return response;
     } catch (e) {
       print('Error adding to cart: $e');

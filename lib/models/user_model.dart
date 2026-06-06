@@ -19,18 +19,18 @@ class UserModel {
     required this.isActive,
   });
 
-  factory UserModel.fromJson(Map<String, dynamic> json) {
-    return UserModel(
-      id: json['id'] ?? json['_id'],
-      phoneNumber: json['phoneNumber'],
-      email: json['email'],
-      name: json['name'],
-      role: json['role'] ?? 'user',
-      createdAt: DateTime.parse(json['createdAt']),
-      lastLogin: json['lastLogin'] != null ? DateTime.parse(json['lastLogin']) : null,
-      isActive: json['isActive'] ?? true,
-    );
-  }
+ factory UserModel.fromJson(Map<String, dynamic> json) {
+  return UserModel(
+    id: json['id'] ?? json['_id'],
+    phoneNumber: json['phoneNumber'],
+    email: json['email'],
+    name: json['name'] ?? json['phoneNumber'] ?? 'User',  // Use phoneNumber as fallback
+    role: json['role'] ?? 'user',
+    createdAt: DateTime.parse(json['createdAt']),
+    lastLogin: json['lastLogin'] != null ? DateTime.parse(json['lastLogin']) : null,
+    isActive: json['isActive'] ?? true,
+  );
+}
 
   Map<String, dynamic> toJson() {
     return {

@@ -9,11 +9,13 @@ import '../screens/checkout_screen.dart';
 class CartScreen extends StatefulWidget {
   final VoidCallback onCartUpdate;
   final String? guestId;
+  final String? token;  // Add token parameter
 
   const CartScreen({
     super.key,
     required this.onCartUpdate,
     this.guestId,
+    this.token,  // Add token parameter
   });
 
   @override
@@ -33,7 +35,7 @@ class _CartScreenState extends State<CartScreen> {
 
   Future<void> _loadCart() async {
     try {
-      final response = await ApiService.getCart(guestId: widget.guestId);
+      final response = await ApiService.getCart(guestId: widget.guestId, token: widget.token);
       setState(() {
         if (response['success'] == true) {
           _cart = response['data'] ?? {'items': [], 'totalItems': 0, 'totalPrice': 0};
@@ -53,7 +55,7 @@ class _CartScreenState extends State<CartScreen> {
       _removingItems.add(itemId);
     });
     try {
-      await ApiService.updateCartItem(itemId, quantity, guestId: widget.guestId);
+      await ApiService.updateCartItem(itemId, quantity, guestId: widget.guestId, token: widget.token);
       await _loadCart();
       widget.onCartUpdate();
     } catch (e) {
@@ -70,7 +72,7 @@ class _CartScreenState extends State<CartScreen> {
       _removingItems.add(itemId);
     });
     try {
-      await ApiService.removeCartItem(itemId, guestId: widget.guestId);
+      await ApiService.removeCartItem(itemId, guestId: widget.guestId, token: widget.token);
       await _loadCart();
       widget.onCartUpdate();
     } catch (e) {
@@ -82,16 +84,21 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  Future<void> _clearCart() async {
-    try {
-      await ApiService.clearCart(guestId: widget.guestId);
-      await _loadCart();
-      widget.onCartUpdate();
-    } catch (e) {
-      print('Error clearing cart: $e');
-    }
+Future<void> _clearCart() async {
+  try {
+    print('🔵 _clearCart called');
+    print('   - widget.guestId: ${widget.guestId}');
+    print('   - widget.token: ${widget.token}');
+    
+    final response = await ApiService.clearCart(guestId: widget.guestId, token: widget.token);
+    print('   - Response: $response');
+    
+    await _loadCart();
+    widget.onCartUpdate();
+  } catch (e) {
+    print('Error clearing cart: $e');
   }
-
+}
   String _formatPrice(double price) {
     return '₹${price.toStringAsFixed(0)}';
   }
@@ -366,16 +373,18 @@ class _CartScreenState extends State<CartScreen> {
                                 final authProvider = Provider.of<AuthProvider>(context, listen: false);
                                 
                                 if (authProvider.isLoggedIn) {
+                                  // Logged in - don't pass guestId
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => CheckoutScreen(
-                                        guestId: widget.guestId,
+                                        guestId: null,
                                         onOrderPlaced: widget.onCartUpdate,
                                       ),
                                     ),
                                   );
                                 } else {
+                                  // Not logged in - show login first
                                   final result = await Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -388,7 +397,7 @@ class _CartScreenState extends State<CartScreen> {
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) => CheckoutScreen(
-                                          guestId: widget.guestId,
+                                          guestId: null,
                                           onOrderPlaced: widget.onCartUpdate,
                                         ),
                                       ),

@@ -1,6 +1,7 @@
 // ========== FILE: lib/main.dart ==========
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
 import 'widgets/hero_section.dart';
 import 'widgets/product_card.dart';
 import 'widgets/testimonials_section.dart';
@@ -9,7 +10,6 @@ import 'widgets/header_section.dart';
 import 'widgets/footer_section.dart';
 import 'widgets/cart_drawer.dart';
 import 'services/api_service.dart';
-import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 
 void main() async {
@@ -71,7 +71,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _refreshCartCount() async {
     try {
-      final response = await ApiService.getCart(guestId: _guestId);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      String? guestIdToUse = authProvider.isLoggedIn ? null : _guestId;
+      String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
+      
+      final response = await ApiService.getCart(guestId: guestIdToUse, token: tokenToUse);
       if (response['success'] == true) {
         setState(() {
           _cartCount = response['data']?['totalItems'] ?? 0;
@@ -121,12 +125,21 @@ class _HomeScreenState extends State<HomeScreen> {
     return '${weekdays[tomorrow.weekday - 1]}, ${months[tomorrow.month - 1]} ${tomorrow.day}';
   }
 
-  void _openCart() {
+void _openCart() {
+  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  String? guestIdToUse = authProvider.isLoggedIn ? null : _guestId;
+  String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
+  
+  print('🔵 _openCart called');
+  print('   - isLoggedIn: ${authProvider.isLoggedIn}');
+  print('   - tokenToUse: $tokenToUse');
+    
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CartScreen(
-          guestId: _guestId,
+          guestId: guestIdToUse,
+          token: tokenToUse,
           onCartUpdate: _refreshCartCount,
         ),
       ),
@@ -135,6 +148,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _addToCart(dynamic product) async {
     try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      String? guestIdToUse = authProvider.isLoggedIn ? null : _guestId;
+      String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
+      
       String variantId = '';
       if (product['variants'] != null && product['variants'].isNotEmpty) {
         variantId = product['variants'][0]['_id'] ?? '';
@@ -144,7 +161,8 @@ class _HomeScreenState extends State<HomeScreen> {
         product['_id'], 
         1, 
         variantId,
-        guestId: _guestId,
+        guestId: guestIdToUse,
+        token: tokenToUse,
       );
       
       if (response['success'] == true) {

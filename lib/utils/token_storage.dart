@@ -1,43 +1,72 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TokenStorage {
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'user_data';
 
-  // Save token and user data
   static Future<void> saveToken(String token) async {
+    print('🔵 TokenStorage.saveToken called');
+    print('   - Token: $token');
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, token);
+    print('✅ Token saved successfully');
   }
 
   static Future<void> saveUser(String userJson) async {
+    print('🔵 TokenStorage.saveUser called');
+    print('   - User JSON: $userJson');
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userKey, userJson);
+    print('✅ User saved successfully');
   }
 
-  // Get token
   static Future<String?> getToken() async {
+    print('🔵 TokenStorage.getToken called');
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
+    final token = prefs.getString(_tokenKey);
+    print('   - Retrieved token: $token');
+    return token;
   }
 
-  // Get user data
-  static Future<String?> getUser() async {
+  static Future<Map<String, dynamic>?> getUser() async {
+    print('🔵 TokenStorage.getUser called');
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_userKey);
+    final value = prefs.get(_userKey);
+    print('   - Retrieved raw value type: ${value.runtimeType}');
+    print('   - Retrieved raw value: $value');
+    
+    if (value == null) return null;
+    
+    if (value is Map) {
+      print('⚠️ Found Map, converting to Map<String, dynamic>');
+      return Map<String, dynamic>.from(value);
+    }
+    
+    if (value is String && value.isNotEmpty) {
+      try {
+        return jsonDecode(value);
+      } catch (e) {
+        print('Error parsing JSON: $e');
+        return null;
+      }
+    }
+    
+    return null;
   }
 
-  // Check if user is logged in
   static Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_tokenKey);
+    print('🔵 TokenStorage.isLoggedIn: ${token != null && token.isNotEmpty}');
     return token != null && token.isNotEmpty;
   }
 
-  // Clear all auth data (logout)
   static Future<void> clearAuthData() async {
+    print('🔵 TokenStorage.clearAuthData called');
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
     await prefs.remove(_userKey);
+    print('✅ Auth data cleared');
   }
 }

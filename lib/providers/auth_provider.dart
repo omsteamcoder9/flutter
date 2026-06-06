@@ -17,53 +17,65 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoggedIn => _token != null && _token!.isNotEmpty;
 
   AuthProvider() {
+    print('🔵 AuthProvider Constructor Called');
     _loadAuthData();
   }
 
   Future<void> _loadAuthData() async {
+    print('🟡 _loadAuthData START');
     _isLoading = true;
     notifyListeners();
 
     _token = await TokenStorage.getToken();
-    final userJson = await TokenStorage.getUser();
+    print('📦 Token from storage: $_token');
     
-    if (userJson != null && userJson.isNotEmpty) {
+    final userMap = await TokenStorage.getUser();
+    print('📦 User map from storage: $userMap');
+    
+    if (userMap != null) {
       try {
-        final Map<String, dynamic> userMap = Map<String, dynamic>.from(
-          (userJson as Map).cast<String, dynamic>()
-        );
         _user = UserModel.fromJson(userMap);
+        print('✅ User loaded successfully:');
+        print('   - Name: ${_user?.name}');
+        print('   - Phone: ${_user?.phoneNumber}');
+        print('   - Email: ${_user?.email}');
+        print('   - Role: ${_user?.role}');
       } catch (e) {
-        print('Error loading user: $e');
+        print('❌ Error loading user: $e');
       }
+    } else {
+      print('⚠️ No user data found in storage');
     }
 
     _isLoading = false;
     notifyListeners();
+    print('🟡 _loadAuthData END - isLoggedIn: $isLoggedIn');
   }
 
   Future<void> loadUserData() async {
+    print('🟡 loadUserData START');
     _token = await TokenStorage.getToken();
-    final userJson = await TokenStorage.getUser();
+    final userMap = await TokenStorage.getUser();
+    print('📦 User map from storage: $userMap');
     
-    if (userJson != null && userJson.isNotEmpty) {
+    if (userMap != null) {
       try {
-        final Map<String, dynamic> userMap = Map<String, dynamic>.from(
-          (userJson as Map).cast<String, dynamic>()
-        );
         _user = UserModel.fromJson(userMap);
+        print('✅ User data reloaded: ${_user?.name}, ${_user?.phoneNumber}');
         notifyListeners();
       } catch (e) {
-        print('Error loading user data: $e');
+        print('❌ Error loading user data: $e');
       }
     }
   }
 
   Future<Map<String, dynamic>> sendOtp(String phoneNumber) async {
+    print('🔵 sendOtp called for: $phoneNumber');
     _isLoading = true;
     notifyListeners();
 
     final result = await AuthService.sendOtp(phoneNumber);
+    print('📦 sendOtp result: $result');
     
     _isLoading = false;
     notifyListeners();
@@ -72,20 +84,45 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> verifyOtp(String otpSessionId, String otpCode, {String? guestId}) async {
+    print('🔵 verifyOtp START');
+    print('   - otpSessionId: $otpSessionId');
+    print('   - otpCode: $otpCode');
+    print('   - guestId: $guestId');
+    
     _isLoading = true;
     notifyListeners();
 
     final result = await AuthService.verifyOtp(otpSessionId, otpCode);
+    print('📦 verifyOtp result success: ${result['success']}');
     
     if (result['success'] == true) {
+      print('✅ Login successful!');
+      print('📦 Token from backend: ${result['token']}');
+      print('📦 User from backend: ${result['user']}');
+      
       _token = result['token'];
       _user = result['user'];
+      
+      print('📦 Parsed User object:');
+      print('   - Name: ${_user?.name}');
+      print('   - Phone: ${_user?.phoneNumber}');
+      print('   - Email: ${_user?.email}');
+      print('   - Role: ${_user?.role}');
+      print('   - ID: ${_user?.id}');
+      
+final userJsonString = jsonEncode(_user!.toJson());
+      print('📦 Saving user JSON: $userJsonString');
+      
       await TokenStorage.saveToken(_token!);
-      await TokenStorage.saveUser(_user!.toJson().toString());
+      await TokenStorage.saveUser(userJsonString);
+      print('✅ Token and user saved to storage');
       
       if (guestId != null && guestId.isNotEmpty) {
+        print('🔄 Merging guest cart: $guestId');
         await _mergeGuestCart(guestId);
       }
+    } else {
+      print('❌ Login failed: ${result['message']}');
     }
     
     _isLoading = false;
@@ -96,6 +133,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _mergeGuestCart(String guestId) async {
     try {
+      print('🔄 Merging cart for guestId: $guestId');
       final url = '${ApiService.baseUrl}/cart/merge';
       final response = await http.post(
         Uri.parse(url),
@@ -105,13 +143,14 @@ class AuthProvider extends ChangeNotifier {
         },
         body: jsonEncode({'guestId': guestId}),
       );
-      print('Cart merged: ${response.body}');
+      print('📦 Cart merge response: ${response.body}');
     } catch (e) {
-      print('Error merging cart: $e');
+      print('❌ Error merging cart: $e');
     }
   }
 
   Future<void> logout() async {
+    print('🔵 logout called');
     if (_token != null) {
       await AuthService.logout(_token!);
     }
@@ -119,9 +158,11 @@ class AuthProvider extends ChangeNotifier {
     _token = null;
     _user = null;
     notifyListeners();
+    print('✅ User logged out, data cleared');
   }
 
   void updateUser(UserModel user) {
+    print('🔵 updateUser called');
     _user = user;
     notifyListeners();
   }

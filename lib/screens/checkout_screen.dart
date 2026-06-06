@@ -1,12 +1,14 @@
 // lib/screens/checkout_screen.dart
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'order_success_screen.dart';
+import 'package:open_file/open_file.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final String? guestId;
@@ -24,7 +26,6 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
-  late Razorpay _razorpay;
   
   // Shipping Address Controllers
   final _nameController = TextEditingController();
@@ -41,17 +42,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _errorMessage;
 
   @override
-  void initState() {
-    super.initState();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
-  }
-
-  @override
   void dispose() {
-    _razorpay.clear();
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
@@ -124,8 +115,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           );
         }
       } else {
-        // Razorpay payment - create Razorpay order
-        await _createRazorpayOrder(order);
+        // Razorpay payment - open external browser
+        await _openRazorpayPayment(order);
       }
     } catch (e) {
       setState(() {
@@ -135,103 +126,184 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  Future<void> _createRazorpayOrder(dynamic order) async {
-    try {
-      final url = '${ApiService.baseUrl}/payments/create-order';
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'orderId': order['orderId']}),
-      );
-
-      final responseData = jsonDecode(response.body);
-
-      if (responseData['success'] != true) {
-        throw Exception(responseData['message'] ?? 'Failed to create payment order');
-      }
-
-      final razorpayOrder = responseData['order'];
-      final razorpayKey = responseData['key'];
-
-      // Open Razorpay checkout
-      _openRazorpayCheckout(razorpayOrder, razorpayKey, order);
-      
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
-  void _openRazorpayCheckout(dynamic razorpayOrder, String razorpayKey, dynamic order) {
-    var options = {
-      'key': razorpayKey,
-      'amount': (order['finalAmount'] * 100).toInt(), // Convert to paise
-      'name': 'SeaFood',
-      'description': 'Order ${order['orderId']}',
-      'order_id': razorpayOrder['id'],
-      'prefill': {
-        'contact': _phoneController.text.trim(),
-        'email': _emailController.text.trim(),
-        'name': _nameController.text.trim(),
-      },
-      'theme': {
-        'color': '#D53E0F',
-      },
-    };
-
-    _razorpay.open(options);
-  }
-
-  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    print("Payment Success: ${response.paymentId}");
+  Future<void> _openRazorpayPayment(dynamic order) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final token = authProvider.token;
     
-    // Verify payment with backend
-    try {
-      final verifyResponse = await ApiService.verifyPayment({
-        'razorpay_order_id': response.orderId,
-        'razorpay_payment_id': response.paymentId,
-        'razorpay_signature': response.signature,
+    if (token == null) {
+      setState(() {
+        _errorMessage = 'Please login to continue';
+        _isLoading = false;
       });
+      return;
+    }
 
-      if (verifyResponse['success'] == true) {
+    // Build Razorpay checkout page HTML
+    final String razorpayHtml = '''
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+        <style>
+          body { margin: 0; padding: 0; }
+          .loader-container { 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+          }
+          .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #D53E0F;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="loader-container">
+          <div class="spinner"></div>
+          <p>Loading payment gateway...</p>
+        </div>
+        <script>
+          async function initPayment() {
+            try {
+              const response = await fetch('${ApiService.baseUrl}/payments/create-order', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer $token'
+                },
+                body: JSON.stringify({ orderId: '${order['orderId']}' })
+              });
+              
+              const data = await response.json();
+              
+              if (data.success) {
+                var options = {
+                  key: data.key,
+                  amount: ${(order['finalAmount'] * 100).toInt()},
+                  currency: 'INR',
+                  name: 'SeaFood',
+                  description: 'Order ${order['orderId']}',
+                  order_id: data.order.id,
+                  prefill: {
+                    name: '${_nameController.text.trim().replaceAll("'", "\\'")}',
+                    email: '${_emailController.text.trim()}',
+                    contact: '${_phoneController.text.trim()}'
+                  },
+                  theme: { color: '#D53E0F' },
+                  handler: function(response) {
+                    fetch('${ApiService.baseUrl}/payments/verify-payment', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_signature: response.razorpay_signature
+                      })
+                    })
+                    .then(res => res.json())
+                    .then(result => {
+                      if (result.success) {
+                        window.location.href = 'razorpay://payment/success?orderId=' + result.order.orderId;
+                      } else {
+                        window.location.href = 'razorpay://payment/failed?message=' + encodeURIComponent(result.message);
+                      }
+                    });
+                  },
+                  modal: {
+                    ondismiss: function() {
+                      window.location.href = 'razorpay://payment/cancelled';
+                    }
+                  }
+                };
+                var rzp = new Razorpay(options);
+                rzp.open();
+              } else {
+                window.location.href = 'razorpay://payment/error?message=' + encodeURIComponent(data.message);
+              }
+            } catch (error) {
+              window.location.href = 'razorpay://payment/error?message=' + encodeURIComponent(error.message);
+            }
+          }
+          
+          initPayment();
+        </script>
+      </body>
+      </html>
+    ''';
+    
+    // Save HTML to temporary file
+    final tempDir = await getTemporaryDirectory();
+    final tempFile = File('${tempDir.path}/razorpay_payment.html');
+    await tempFile.writeAsString(razorpayHtml);
+    
+    // Open with default browser
+    final result = await OpenFile.open(tempFile.path);
+    
+    if (result.type != ResultType.done) {
+      setState(() {
+        _errorMessage = 'Failed to open payment gateway';
+        _isLoading = false;
+      });
+    } else {
+      await _verifyOrderStatus(order['orderId']);
+    }
+  }
+
+  Future<void> _verifyOrderStatus(String orderId) async {
+    // Add a delay to allow payment processing
+    await Future.delayed(const Duration(seconds: 3));
+    
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = authProvider.token;
+      
+      final response = await http.get(
+        Uri.parse('${ApiService.baseUrl}/payments/status/$orderId'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+      
+      final data = jsonDecode(response.body);
+      
+      if (data['success'] && data['payment']['status'] == 'paid') {
         widget.onOrderPlaced();
         if (mounted) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
               builder: (context) => OrderSuccessScreen(
-                orderId: verifyResponse['order']['orderId'],
-                orderData: verifyResponse['order'],
+                orderId: orderId,
+                orderData: {'orderId': orderId},
               ),
             ),
           );
         }
       } else {
         setState(() {
-          _errorMessage = verifyResponse['message'] ?? 'Payment verification failed';
+          _errorMessage = 'Payment not completed. Please try again.';
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Payment verification failed: $e';
+        _errorMessage = 'Unable to verify payment status';
         _isLoading = false;
       });
     }
-  }
-
-  void _handlePaymentError(PaymentFailureResponse response) {
-    print("Payment Error: ${response.code} - ${response.message}");
-    setState(() {
-      _errorMessage = response.message ?? 'Payment failed. Please try again.';
-      _isLoading = false;
-    });
-  }
-
-  void _handleExternalWallet(ExternalWalletResponse response) {
-    print("External Wallet: ${response.walletName}");
   }
 
   @override

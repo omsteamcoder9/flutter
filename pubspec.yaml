@@ -15,8 +15,9 @@ dependencies:
   carousel_slider: ^5.1.2
   provider: ^6.1.5+1
   shared_preferences: ^2.5.5
-  razorpay_flutter: ^1.4.5
-
+  path_provider: ^2.1.5
+  open_file: ^3.5.11
+  url_launcher: ^6.3.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
