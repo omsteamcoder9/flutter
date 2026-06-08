@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../orders/orders_screen.dart';
+import '../terms_screen.dart';
+import '../privacy_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -27,7 +30,9 @@ class ProfileScreen extends StatelessWidget {
             icon: const Icon(Icons.logout, color: Color(0xFF5E0006)),
             onPressed: () async {
               await authProvider.logout();
-              Navigator.pop(context);
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
             },
           ),
         ],
@@ -107,23 +112,41 @@ class ProfileScreen extends StatelessWidget {
             
             // Menu Items
             _buildMenuItem(
+              context,
               Icons.shopping_bag_outlined,
               'My Orders',
               'View all your orders',
-              () {},
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const OrdersScreen()),
+                );
+              },
             ),
-            _buildMenuItem(
-              Icons.description_outlined,
-              'Terms & Conditions',
-              '',
-              () {},
-            ),
-            _buildMenuItem(
-              Icons.privacy_tip_outlined,
-              'Privacy Policy',
-              '',
-              () {},
-            ),
+           _buildMenuItem(
+  context,
+  Icons.description_outlined,
+  'Terms & Conditions',
+  '',
+  () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const TermsScreen()),
+    );
+  },
+),
+    _buildMenuItem(
+  context,
+  Icons.privacy_tip_outlined,
+  'Privacy Policy',
+  '',
+  () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const PrivacyScreen()),
+    );
+  },
+),
             
             const SizedBox(height: 16),
             
@@ -133,7 +156,9 @@ class ProfileScreen extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () async {
                   await authProvider.logout();
-                  Navigator.pop(context);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
                 },
                 icon: const Icon(Icons.logout, color: Color(0xFF5E0006)),
                 label: const Text(
@@ -155,34 +180,67 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuItem(IconData icon, String title, String subtitle, VoidCallback onTap) {
+  Widget _buildMenuItem(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String subtitle,
+    VoidCallback onTap,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0xFF5E0006).withOpacity(0.05),
-            borderRadius: BorderRadius.circular(10),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF5E0006).withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: const Color(0xFF5E0006), size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF333333),
+                        ),
+                      ),
+                      if (subtitle.isNotEmpty)
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 20),
+              ],
+            ),
           ),
-          child: Icon(icon, color: const Color(0xFF5E0006), size: 20),
         ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF333333),
-          ),
-        ),
-        subtitle: subtitle.isNotEmpty
-            ? Text(
-                subtitle,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              )
-            : null,
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-        onTap: onTap,
       ),
     );
   }

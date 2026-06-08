@@ -9,13 +9,13 @@ import '../screens/checkout_screen.dart';
 class CartScreen extends StatefulWidget {
   final VoidCallback onCartUpdate;
   final String? guestId;
-  final String? token;  // Add token parameter
+  final String? token;
 
   const CartScreen({
     super.key,
     required this.onCartUpdate,
     this.guestId,
-    this.token,  // Add token parameter
+    this.token,
   });
 
   @override
@@ -84,21 +84,22 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-Future<void> _clearCart() async {
-  try {
-    print('🔵 _clearCart called');
-    print('   - widget.guestId: ${widget.guestId}');
-    print('   - widget.token: ${widget.token}');
-    
-    final response = await ApiService.clearCart(guestId: widget.guestId, token: widget.token);
-    print('   - Response: $response');
-    
-    await _loadCart();
-    widget.onCartUpdate();
-  } catch (e) {
-    print('Error clearing cart: $e');
+  Future<void> _clearCart() async {
+    try {
+      print('🔵 _clearCart called');
+      print('   - widget.guestId: ${widget.guestId}');
+      print('   - widget.token: ${widget.token}');
+      
+      final response = await ApiService.clearCart(guestId: widget.guestId, token: widget.token);
+      print('   - Response: $response');
+      
+      await _loadCart();
+      widget.onCartUpdate();
+    } catch (e) {
+      print('Error clearing cart: $e');
+    }
   }
-}
+  
   String _formatPrice(double price) {
     return '₹${price.toStringAsFixed(0)}';
   }
@@ -177,11 +178,15 @@ Future<void> _clearCart() async {
                     ],
                   ),
                 )
-              : Column(
-                  children: [
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(12),
+              : SingleChildScrollView(  // ← Changed from Column to SingleChildScrollView
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Cart Items List
+                      ListView.builder(
+                        shrinkWrap: true,  // Important: Makes ListView take only needed space
+                        physics: const NeverScrollableScrollPhysics(),  // Disable inner scrolling
                         itemCount: items.length,
                         itemBuilder: (context, index) {
                           final item = items[index];
@@ -318,108 +323,114 @@ Future<void> _clearCart() async {
                           );
                         },
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border(top: BorderSide(color: Colors.grey.shade200)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.shade100,
-                            blurRadius: 8,
-                            offset: const Offset(0, -2),
-                          ),
-                        ],
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Price Summary Section (moved inside scroll view)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Subtotal', style: TextStyle(fontSize: 15)),
+                                Text(_formatPrice(subtotal), style: const TextStyle(fontSize: 15)),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Shipping', style: TextStyle(fontSize: 15)),
+                                const Text('FREE', style: TextStyle(fontSize: 15, color: Color(0xFFD53E0F), fontWeight: FontWeight.w500)),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Tax (5%)', style: TextStyle(fontSize: 15)),
+                                Text(_formatPrice(tax), style: const TextStyle(fontSize: 15)),
+                              ],
+                            ),
+                            const Divider(height: 24, thickness: 1),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                Text(_formatPrice(total), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF9B0F06))),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Subtotal', style: TextStyle(fontSize: 15)),
-                              Text(_formatPrice(subtotal), style: const TextStyle(fontSize: 15)),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Shipping', style: TextStyle(fontSize: 15)),
-                              const Text('FREE', style: TextStyle(fontSize: 15, color: Color(0xFFD53E0F), fontWeight: FontWeight.w500)),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Tax (5%)', style: TextStyle(fontSize: 15)),
-                              Text(_formatPrice(tax), style: const TextStyle(fontSize: 15)),
-                            ],
-                          ),
-                          const Divider(height: 24, thickness: 1),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                              Text(_formatPrice(total), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF9B0F06))),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                                
-                                if (authProvider.isLoggedIn) {
-                                  // Logged in - don't pass guestId
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => CheckoutScreen(
-                                        guestId: null,
-                                        onOrderPlaced: widget.onCartUpdate,
-                                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Proceed to Checkout Button (moved inside scroll view, at the bottom)
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                            
+                            if (authProvider.isLoggedIn) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CheckoutScreen(
+                                    guestId: null,
+                                    onOrderPlaced: widget.onCartUpdate,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => LoginScreen(guestId: widget.guestId),
+                                ),
+                              );
+                              
+                              if (authProvider.isLoggedIn) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CheckoutScreen(
+                                      guestId: null,
+                                      onOrderPlaced: widget.onCartUpdate,
                                     ),
-                                  );
-                                } else {
-                                  // Not logged in - show login first
-                                  final result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => LoginScreen(guestId: widget.guestId),
-                                    ),
-                                  );
-                                  
-                                  if (authProvider.isLoggedIn) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => CheckoutScreen(
-                                          guestId: null,
-                                          onOrderPlaced: widget.onCartUpdate,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF9B0F06),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              child: const Text(
-                                'Proceed to Checkout',
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFD53E0F),  // Same as checkout screen
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                        ],
+                          child: const Text(
+                            'Proceed to Checkout',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                      
+                      const SizedBox(height: 16),  // Extra bottom padding
+                    ],
+                  ),
                 ),
     );
   }

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'widgets/hero_section.dart';
 import 'widgets/product_card.dart';
 import 'widgets/testimonials_section.dart';
@@ -11,6 +12,9 @@ import 'widgets/footer_section.dart';
 import 'widgets/cart_drawer.dart';
 import 'services/api_service.dart';
 import 'providers/auth_provider.dart';
+import 'screens/order_success_screen.dart';
+import 'screens/product_detail_screen.dart';
+
 
 void main() async {
   await dotenv.load();
@@ -36,6 +40,16 @@ class MyApp extends StatelessWidget {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: HomeScreen(),
+      routes: {
+        '/product-detail': (context) => ProductDetailScreen(
+          productId: ModalRoute.of(context)!.settings.arguments as String,
+        ),
+        '/checkout': (context) => CartScreen(
+          guestId: null,
+          token: null,
+          onCartUpdate: () {},
+        ),
+      },
       debugShowCheckedModeBanner: false,
     );
   }
@@ -63,6 +77,28 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadGuestId();
     _loadProducts();
     _refreshCartCount();
+    _checkPendingOrder();
+  }
+
+  Future<void> _checkPendingOrder() async {
+    final prefs = await SharedPreferences.getInstance();
+    final pendingOrderId = prefs.getString('pending_order_id');
+    if (pendingOrderId != null && pendingOrderId.isNotEmpty) {
+      await prefs.remove('pending_order_id');
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OrderSuccessScreen(
+                orderId: pendingOrderId,
+                orderData: {'orderId': pendingOrderId},
+              ),
+            ),
+          );
+        }
+      });
+    }
   }
 
   void _loadGuestId() {
@@ -125,14 +161,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return '${weekdays[tomorrow.weekday - 1]}, ${months[tomorrow.month - 1]} ${tomorrow.day}';
   }
 
-void _openCart() {
-  final authProvider = Provider.of<AuthProvider>(context, listen: false);
-  String? guestIdToUse = authProvider.isLoggedIn ? null : _guestId;
-  String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
-  
-  print('🔵 _openCart called');
-  print('   - isLoggedIn: ${authProvider.isLoggedIn}');
-  print('   - tokenToUse: $tokenToUse');
+  void _openCart() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    String? guestIdToUse = authProvider.isLoggedIn ? null : _guestId;
+    String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
+    
+    print('🔵 _openCart called');
+    print('   - isLoggedIn: ${authProvider.isLoggedIn}');
+    print('   - tokenToUse: $tokenToUse');
     
     Navigator.push(
       context,
@@ -398,9 +434,16 @@ void _openCart() {
                     ),
                     itemCount: products.length,
                     itemBuilder: (context, index) {
+                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                      String? guestIdToUse = authProvider.isLoggedIn ? null : _guestId;
+                      String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
+                      
                       return ProductCard(
                         product: products[index],
                         onAddToCart: () => _addToCart(products[index]),
+                        guestId: guestIdToUse,
+                        token: tokenToUse,
+                        onCartUpdate: _refreshCartCount,
                       );
                     },
                   ),

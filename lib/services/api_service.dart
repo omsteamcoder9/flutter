@@ -1,8 +1,11 @@
-// ========== FILE: lib/services/api_service.dart ==========
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
+import 'dart:typed_data';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/order.dart';
+import '../models/terms.dart';
+import '../models/privacy.dart';
 class ApiService {
   static String get baseUrl => dotenv.env['BASE_URL'] ?? '';
   
@@ -96,35 +99,34 @@ class ApiService {
     }
   }
   
-static Future<dynamic> deleteWithAuth(String endpoint, {Map<String, dynamic>? body, String? token}) async {
-  try {
-    final url = '$baseUrl$endpoint';
-    final Map<String, String> headers = {};
-    
-    // Only add Content-Type if there is a body
-    if (body != null) {
-      headers['Content-Type'] = 'application/json';
+  static Future<dynamic> deleteWithAuth(String endpoint, {Map<String, dynamic>? body, String? token}) async {
+    try {
+      final url = '$baseUrl$endpoint';
+      final Map<String, String> headers = {};
+      
+      if (body != null) {
+        headers['Content-Type'] = 'application/json';
+      }
+      
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+      
+      final request = http.Request('DELETE', Uri.parse(url));
+      request.headers.addAll(headers);
+      if (body != null) {
+        request.body = jsonEncode(body);
+      }
+      
+      final response = await request.send().timeout(const Duration(seconds: 10));
+      final responseBody = await response.stream.bytesToString();
+      
+      return jsonDecode(responseBody);
+    } catch (e) {
+      print('DELETE ERROR: $e');
+      rethrow;
     }
-    
-    if (token != null && token.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
-    }
-    
-    final request = http.Request('DELETE', Uri.parse(url));
-    request.headers.addAll(headers);
-    if (body != null) {
-      request.body = jsonEncode(body);
-    }
-    
-    final response = await request.send().timeout(const Duration(seconds: 10));
-    final responseBody = await response.stream.bytesToString();
-    
-    return jsonDecode(responseBody);
-  } catch (e) {
-    print('DELETE ERROR: $e');
-    rethrow;
   }
-}
   
   static Future<dynamic> get(String endpoint) async {
     try {
@@ -267,42 +269,37 @@ static Future<dynamic> deleteWithAuth(String endpoint, {Map<String, dynamic>? bo
     }
   }
   
-  static Future<Map<String, dynamic>?> getProductBySlug(String slug) async {
-    try {
-      final response = await get('/products/$slug');
-      if (response['success'] == true) {
-        return response['data'];
-      } else if (response['product'] != null) {
-        return response['product'];
-      } else {
-        return response;
-      }
-    } catch (e) {
-      return null;
+static Future<Map<String, dynamic>?> getProductBySlug(String slug) async {
+  try {
+    final response = await get('/products/slug/$slug');  // ← Add /slug/
+    if (response['success'] == true) {
+      return response['data'];
     }
+    return null;
+  } catch (e) {
+    print('Error fetching product by slug: $e');
+    return null;
   }
+}
   
-  static Future<Map<String, dynamic>?> getProductById(String id) async {
-    try {
-      final response = await get('/products/id/$id');
-      if (response['success'] == true) {
-        return response['data'];
-      } else if (response['product'] != null) {
-        return response['product'];
-      } else {
-        return response;
-      }
-    } catch (e) {
-      return null;
+ static Future<Map<String, dynamic>?> getProductById(String id) async {
+  try {
+    final response = await get('/products/$id');  // This is correct
+    if (response['success'] == true) {
+      return response['data'];
     }
+    return null;
+  } catch (e) {
+    print('Error fetching product by ID: $e');
+    return null;
   }
+}
   
   // ========== CART METHODS WITH TOKEN SUPPORT ==========
   
   static Future<dynamic> getCart({String? guestId, String? token}) async {
     try {
       String endpoint = '/cart';
-      // Only use guestId in query if no token and guestId exists
       if (guestId != null && guestId.isNotEmpty && (token == null || token.isEmpty)) {
         endpoint = '/cart?guestId=$guestId';
       }
@@ -328,44 +325,40 @@ static Future<dynamic> deleteWithAuth(String endpoint, {Map<String, dynamic>? bo
     }
   }
   
- static Future<dynamic> removeCartItem(String itemId, {String? guestId, String? token}) async {
-  try {
-    // If logged in (token exists), don't send any body
-    if (token != null && token.isNotEmpty) {
-      final response = await deleteWithAuth('/cart/items/$itemId', body: null, token: token);
+  static Future<dynamic> removeCartItem(String itemId, {String? guestId, String? token}) async {
+    try {
+      if (token != null && token.isNotEmpty) {
+        final response = await deleteWithAuth('/cart/items/$itemId', body: null, token: token);
+        return response;
+      }
+      
+      final Map<String, dynamic>? body = (guestId != null && guestId.isNotEmpty) 
+          ? {'guestId': guestId} 
+          : null;
+      final response = await deleteWithAuth('/cart/items/$itemId', body: body, token: null);
       return response;
+    } catch (e) {
+      rethrow;
     }
-    
-    // For guest users, send guestId in body
-    final Map<String, dynamic>? body = (guestId != null && guestId.isNotEmpty) 
-        ? {'guestId': guestId} 
-        : null;
-    final response = await deleteWithAuth('/cart/items/$itemId', body: body, token: null);
-    return response;
-  } catch (e) {
-    rethrow;
   }
-}
   
-static Future<dynamic> clearCart({String? guestId, String? token}) async {
-  try {
-    // If logged in (token exists), don't send any body
-    if (token != null && token.isNotEmpty) {
-      final response = await deleteWithAuth('/cart', body: null, token: token);
+  static Future<dynamic> clearCart({String? guestId, String? token}) async {
+    try {
+      if (token != null && token.isNotEmpty) {
+        final response = await deleteWithAuth('/cart', body: null, token: token);
+        return response;
+      }
+      
+      final Map<String, dynamic>? body = (guestId != null && guestId.isNotEmpty) 
+          ? {'guestId': guestId} 
+          : null;
+      final response = await deleteWithAuth('/cart', body: body, token: null);
       return response;
+    } catch (e) {
+      print('Error clearing cart: $e');
+      rethrow;
     }
-    
-    // For guest users, send guestId in body
-    final Map<String, dynamic>? body = (guestId != null && guestId.isNotEmpty) 
-        ? {'guestId': guestId} 
-        : null;
-    final response = await deleteWithAuth('/cart', body: body, token: null);
-    return response;
-  } catch (e) {
-    print('Error clearing cart: $e');
-    rethrow;
   }
-}
 
   static Future<dynamic> addToCart(String productId, int quantity, String variantId, {String? guestId, String? token}) async {
     try {
@@ -443,25 +436,104 @@ static Future<dynamic> clearCart({String? guestId, String? token}) async {
     }
   }
 
-  static Future<dynamic> getOrderReceipt(String orderId, {String? token}) async {
-    try {
-      final url = '$baseUrl/orders/$orderId/receipt';
-      final Map<String, String> headers = {
-        'Content-Type': 'application/json',
-      };
-      if (token != null && token.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-      
-      final response = await http.get(
-        Uri.parse(url),
-        headers: headers,
-      ).timeout(const Duration(seconds: 30));
-      
-      return jsonDecode(response.body);
-    } catch (e) {
-      print('Error getting receipt: $e');
-      rethrow;
+  // ========== NEW ORDER METHODS FOR USER ==========
+  
+  // Get user orders
+  static Future<List<Order>> getUserOrders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await getWithAuth('/orders/my-orders', token: token);
+    
+    if (response['success'] == true) {
+      final ordersData = response['orders'] as List? ?? [];
+      return ordersData.map((data) => Order.fromJson(data)).toList();
     }
+    throw Exception(response['message'] ?? 'Failed to fetch orders');
   }
+
+  // Get single order by ID
+  static Future<Order> getOrderById(String orderId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await getWithAuth('/orders/$orderId', token: token);
+    
+    if (response['success'] == true) {
+      return Order.fromJson(response['order']);
+    }
+    throw Exception(response['message'] ?? 'Failed to fetch order');
+  }
+
+  // Cancel order
+  static Future<Map<String, dynamic>> cancelOrder(String orderId, {String? reason}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    
+    if (token == null) throw Exception('Not authenticated');
+
+    final body = reason != null ? {'cancellationReason': reason} : {};
+    return await putWithAuth('/orders/$orderId/cancel', body, token: token);
+  }
+
+  // Download PDF receipt
+  static Future<Uint8List?> downloadOrderReceiptPDF(String orderId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    
+    if (token == null) throw Exception('Not authenticated');
+
+    final url = '$baseUrl/orders/$orderId/receipt/pdf';
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    
+    if (response.statusCode == 200) {
+      return response.bodyBytes;
+    }
+    return null;
+  }
+
+  // ========== TERMS & CONDITIONS METHODS ==========
+
+// Get latest terms
+static Future<TermsData> getTerms() async {
+  try {
+    final response = await get('/terms');
+    
+    if (response['success'] == true) {
+      return TermsData.fromJson(response['data']);
+    } else {
+      throw Exception(response['message'] ?? 'Failed to fetch terms');
+    }
+  } catch (e) {
+    print('Error fetching terms: $e');
+    rethrow;
+  }
+}
+
+// ========== PRIVACY POLICY METHODS ==========
+
+// Get latest privacy policy
+static Future<PrivacyData> getPrivacy() async {
+  try {
+    final response = await get('/privacy');
+    
+    if (response['success'] == true) {
+      return PrivacyData.fromJson(response['data']);
+    } else {
+      throw Exception(response['message'] ?? 'Failed to fetch privacy policy');
+    }
+  } catch (e) {
+    print('Error fetching privacy policy: $e');
+    rethrow;
+  }
+}
+
+
 }

@@ -18,6 +18,8 @@ dependencies:
   path_provider: ^2.1.5
   open_file: ^3.5.11
   url_launcher: ^6.3.2
+  app_links: ^7.1.1
+  share_plus: ^13.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

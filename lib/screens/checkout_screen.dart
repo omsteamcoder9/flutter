@@ -1,14 +1,12 @@
 // lib/screens/checkout_screen.dart
-import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:path_provider/path_provider.dart';
 import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
 import 'package:http/http.dart' as http;
 import 'order_success_screen.dart';
-import 'package:open_file/open_file.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final String? guestId;
@@ -57,6 +55,46 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Future<void> _placeOrder() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // City validation - Karaikudi only
+    final city = _cityController.text.trim().toLowerCase();
+    final allowedCities = ['karaikudi', 'karaikudi.', 'karaikudi,', 'karaikudi '];
+    bool isDeliverable = allowedCities.any((allowed) => city.contains(allowed));
+    
+    if (!isDeliverable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('We only deliver to Karaikudi and surrounding areas.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    // Street validation
+    final street = _streetController.text.trim();
+    if (street.isEmpty || street.length < 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a complete street address'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Phone validation
+    final phone = _phoneController.text.trim();
+    if (phone.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid 10-digit phone number'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -94,7 +132,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode != 201 || responseData['success'] != true) {
-        throw Exception(responseData['message'] ?? 'Failed to create order');
+        // Show backend error message
+        final errorMsg = responseData['message'] ?? 'Failed to create order';
+        
+        // Check for street not found error
+        if (responseData['code'] == 'STREET_NOT_FOUND') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('We could not verify your street address. Please enter a valid street in Karaikudi.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMsg),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+        throw Exception(errorMsg);
       }
 
       final order = responseData['order'];
@@ -115,7 +174,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           );
         }
       } else {
-        // Razorpay payment - open external browser
+        // Razorpay payment - open browser
         await _openRazorpayPayment(order);
       }
     } catch (e) {
@@ -138,169 +197,88 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    // Build Razorpay checkout page HTML
-    final String razorpayHtml = '''
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-        <style>
-          body { margin: 0; padding: 0; }
-          .loader-container { 
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            flex-direction: column;
-          }
-          .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #D53E0F;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="loader-container">
-          <div class="spinner"></div>
-          <p>Loading payment gateway...</p>
-        </div>
-        <script>
-          async function initPayment() {
-            try {
-              const response = await fetch('${ApiService.baseUrl}/payments/create-order', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': 'Bearer $token'
-                },
-                body: JSON.stringify({ orderId: '${order['orderId']}' })
-              });
-              
-              const data = await response.json();
-              
-              if (data.success) {
-                var options = {
-                  key: data.key,
-                  amount: ${(order['finalAmount'] * 100).toInt()},
-                  currency: 'INR',
-                  name: 'SeaFood',
-                  description: 'Order ${order['orderId']}',
-                  order_id: data.order.id,
-                  prefill: {
-                    name: '${_nameController.text.trim().replaceAll("'", "\\'")}',
-                    email: '${_emailController.text.trim()}',
-                    contact: '${_phoneController.text.trim()}'
-                  },
-                  theme: { color: '#D53E0F' },
-                  handler: function(response) {
-                    fetch('${ApiService.baseUrl}/payments/verify-payment', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        razorpay_order_id: response.razorpay_order_id,
-                        razorpay_payment_id: response.razorpay_payment_id,
-                        razorpay_signature: response.razorpay_signature
-                      })
-                    })
-                    .then(res => res.json())
-                    .then(result => {
-                      if (result.success) {
-                        window.location.href = 'razorpay://payment/success?orderId=' + result.order.orderId;
-                      } else {
-                        window.location.href = 'razorpay://payment/failed?message=' + encodeURIComponent(result.message);
-                      }
-                    });
-                  },
-                  modal: {
-                    ondismiss: function() {
-                      window.location.href = 'razorpay://payment/cancelled';
-                    }
-                  }
-                };
-                var rzp = new Razorpay(options);
-                rzp.open();
-              } else {
-                window.location.href = 'razorpay://payment/error?message=' + encodeURIComponent(data.message);
-              }
-            } catch (error) {
-              window.location.href = 'razorpay://payment/error?message=' + encodeURIComponent(error.message);
-            }
-          }
-          
-          initPayment();
-        </script>
-      </body>
-      </html>
-    ''';
+    // Open payment page in browser
+    final paymentUrl = '${ApiService.baseUrl}/payment-page/${order['orderId']}';
+    final uri = Uri.parse(paymentUrl);
     
-    // Save HTML to temporary file
-    final tempDir = await getTemporaryDirectory();
-    final tempFile = File('${tempDir.path}/razorpay_payment.html');
-    await tempFile.writeAsString(razorpayHtml);
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     
-    // Open with default browser
-    final result = await OpenFile.open(tempFile.path);
-    
-    if (result.type != ResultType.done) {
+    if (!launched) {
       setState(() {
         _errorMessage = 'Failed to open payment gateway';
         _isLoading = false;
       });
     } else {
-      await _verifyOrderStatus(order['orderId']);
+      // Wait for user to complete payment and return
+      await _checkPaymentAfterReturn(order['orderId']);
     }
   }
 
-  Future<void> _verifyOrderStatus(String orderId) async {
-    // Add a delay to allow payment processing
+  Future<void> _checkPaymentAfterReturn(String orderId) async {
+    print('🔵 _checkPaymentAfterReturn START for order: $orderId');
+    
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final token = authProvider.token;
+    
     await Future.delayed(const Duration(seconds: 3));
     
-    try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final token = authProvider.token;
-      
-      final response = await http.get(
-        Uri.parse('${ApiService.baseUrl}/payments/status/$orderId'),
-        headers: {
-          'Content-Type': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
       );
+    }
+    
+    bool paymentCompleted = false;
+    
+    for (int i = 0; i < 10; i++) {
+      await Future.delayed(const Duration(seconds: 2));
+      print('🔵 Checking payment status attempt ${i+1}...');
       
-      final data = jsonDecode(response.body);
-      
-      if (data['success'] && data['payment']['status'] == 'paid') {
-        widget.onOrderPlaced();
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => OrderSuccessScreen(
-                orderId: orderId,
-                orderData: {'orderId': orderId},
-              ),
-            ),
-          );
+      try {
+        final response = await http.get(
+          Uri.parse('${ApiService.baseUrl}/payments/status/$orderId'),
+          headers: {
+            'Content-Type': 'application/json',
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
+        );
+        
+        final data = jsonDecode(response.body);
+        print('🔵 Payment status response: $data');
+        
+        if (data['success'] && data['payment']['status'] == 'paid') {
+          paymentCompleted = true;
+          print('🔵 Payment COMPLETED!');
+          break;
         }
-      } else {
-        setState(() {
-          _errorMessage = 'Payment not completed. Please try again.';
-          _isLoading = false;
-        });
+      } catch (e) {
+        print('🔵 Verification attempt $i failed: $e');
       }
-    } catch (e) {
+    }
+    
+    if (mounted) {
+      Navigator.pop(context); // Close loading
+    }
+    
+    if (paymentCompleted && mounted) {
+      print('🔵 NAVIGATING TO ORDER SUCCESS SCREEN');
+      widget.onOrderPlaced();
+      
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OrderSuccessScreen(
+            orderId: orderId,
+            orderData: {'orderId': orderId},
+          ),
+        ),
+      );
+    } else if (mounted) {
+      print('🔵 PAYMENT NOT COMPLETED');
       setState(() {
-        _errorMessage = 'Unable to verify payment status';
+        _errorMessage = 'Payment not completed. Please try again.';
         _isLoading = false;
       });
     }
