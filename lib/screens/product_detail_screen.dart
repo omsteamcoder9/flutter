@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../widgets/product_card.dart';
+import 'dart:convert';
 
 class ProductDetailScreen extends StatefulWidget {
   final String? productId;
@@ -245,7 +246,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
         );
 
-        // Update cart count in main screen
         if (widget.onCartUpdate != null) {
           widget.onCartUpdate!();
         }
@@ -284,39 +284,33 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     });
 
     try {
-      final variantId = _selectedVariant?['_id'] ?? '';
+      final prefs = await SharedPreferences.getInstance();
       
-      final response = await ApiService.addToCart(
-        _product!['_id'],
-        _quantity,
-        variantId,
-        guestId: _guestId,
-        token: _authToken,
-      );
-
-      if (response['success'] == true) {
-        // Update cart count
-        if (widget.onCartUpdate != null) {
-          widget.onCartUpdate!();
-        }
-        
-        // Navigate to checkout
-        if (mounted) {
-          Navigator.pushNamed(context, '/checkout');
-        }
-      } else {
-        throw Exception(response['message'] ?? 'Failed to add to cart');
+      final buyNowOrder = {
+        'productId': _product!['_id'],
+        'productName': _product!['name'],
+        'quantity': _quantity,
+        'variantId': _selectedVariant?['_id'] ?? '',
+        'variantName': _selectedVariant?['variantName'] ?? '',
+        'price': _getCurrentPrice(),
+        'imageUrl': _getCurrentImages().isNotEmpty ? _getImageUrl(_getCurrentImages()[0]) : '',
+      };
+      
+      await prefs.setString('buy_now_order', jsonEncode(buyNowOrder));
+      
+      if (mounted) {
+        Navigator.pushNamed(context, '/checkout');
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
-      setState(() {
-        _isAddingToCart = false;
-      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAddingToCart = false;
+        });
+      }
     }
   }
 

@@ -14,7 +14,7 @@ import 'services/api_service.dart';
 import 'providers/auth_provider.dart';
 import 'screens/order_success_screen.dart';
 import 'screens/product_detail_screen.dart';
-
+import 'screens/checkout_screen.dart';
 
 void main() async {
   await dotenv.load();
@@ -44,10 +44,9 @@ class MyApp extends StatelessWidget {
         '/product-detail': (context) => ProductDetailScreen(
           productId: ModalRoute.of(context)!.settings.arguments as String,
         ),
-        '/checkout': (context) => CartScreen(
+        '/checkout': (context) => CheckoutScreen(
           guestId: null,
-          token: null,
-          onCartUpdate: () {},
+          onOrderPlaced: () {},
         ),
       },
       debugShowCheckedModeBanner: false,
