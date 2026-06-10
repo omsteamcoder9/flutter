@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../utils/token_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthProvider extends ChangeNotifier {
   UserModel? _user;
@@ -120,6 +121,8 @@ final userJsonString = jsonEncode(_user!.toJson());
       if (guestId != null && guestId.isNotEmpty) {
         print('🔄 Merging guest cart: $guestId');
         await _mergeGuestCart(guestId);
+          notifyListeners();  // ✅ ADD THIS LINE
+
       }
     } else {
       print('❌ Login failed: ${result['message']}');
@@ -131,24 +134,37 @@ final userJsonString = jsonEncode(_user!.toJson());
     return result;
   }
 
-  Future<void> _mergeGuestCart(String guestId) async {
-    try {
-      print('🔄 Merging cart for guestId: $guestId');
-      final url = '${ApiService.baseUrl}/cart/merge';
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_token',
-        },
-        body: jsonEncode({'guestId': guestId}),
-      );
-      print('📦 Cart merge response: ${response.body}');
-    } catch (e) {
-      print('❌ Error merging cart: $e');
+Future<void> _mergeGuestCart(String guestId) async {
+  try {
+    print('🔄 Merging cart for guestId: $guestId');
+    final url = '${ApiService.baseUrl}/cart/merge';
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $_token',
+      },
+      body: jsonEncode({'guestId': guestId}),
+    );
+    print('📦 Cart merge response: ${response.body}');
+    
+    // ✅ Parse response to see if merge worked
+    final data = jsonDecode(response.body);
+    if (data['success'] == true) {
+      print('✅ Merge successful! Merged cart has ${data['data']?['totalItems']} items');
+    } else {
+      print('❌ Merge failed: ${data['message']}');
     }
+    
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('guest_id');
+    
+    notifyListeners();
+    
+  } catch (e) {
+    print('❌ Error merging cart: $e');
   }
-
+}
   Future<void> logout() async {
     print('🔵 logout called');
     if (_token != null) {

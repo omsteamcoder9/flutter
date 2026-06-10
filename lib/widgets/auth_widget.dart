@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../screens/auth/login_screen.dart';
+import '../screens/auth/signup_screen.dart';  // ✅ CHANGE: Import SignupScreen
 import '../screens/profile/profile_screen.dart';
 
 class AuthIconWidget extends StatelessWidget {
@@ -20,10 +20,10 @@ class AuthIconWidget extends StatelessWidget {
             MaterialPageRoute(builder: (context) => const ProfileScreen()),
           );
         } else {
-          // User not logged in - show login screen
+          // ✅ CHANGE: User not logged in - go to SignupScreen (not LoginScreen)
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
+            MaterialPageRoute(builder: (context) => const SignupScreen()),
           );
         }
       },

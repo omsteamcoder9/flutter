@@ -1,4 +1,3 @@
-// ========== FILE: lib/main.dart ==========
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +14,9 @@ import 'providers/auth_provider.dart';
 import 'screens/order_success_screen.dart';
 import 'screens/product_detail_screen.dart';
 import 'screens/checkout_screen.dart';
+import 'screens/category_products_screen.dart';
+import 'screens/auth/login_screen.dart'; 
+import 'screens/auth/signup_screen.dart'; // Add this import
 
 void main() async {
   await dotenv.load();
@@ -40,15 +42,25 @@ class MyApp extends StatelessWidget {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: HomeScreen(),
-      routes: {
-        '/product-detail': (context) => ProductDetailScreen(
-          productId: ModalRoute.of(context)!.settings.arguments as String,
-        ),
-        '/checkout': (context) => CheckoutScreen(
-          guestId: null,
-          onOrderPlaced: () {},
-        ),
-      },
+   routes: {
+  '/product-detail': (context) => ProductDetailScreen(
+    productId: ModalRoute.of(context)!.settings.arguments as String,
+  ),
+  '/checkout': (context) => CheckoutScreen(
+    guestId: null,
+    onOrderPlaced: () {},
+  ),
+    '/login': (context) => LoginScreen(),  // ✅ ADD THIS LINE
+'/signup': (context) => SignupScreen(),
+
+  '/category-products': (context) {
+    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    return CategoryProductsScreen(
+      categoryId: args['categoryId'],
+      categoryName: args['categoryName'],
+    );
+  },
+},
       debugShowCheckedModeBanner: false,
     );
   }
@@ -69,14 +81,40 @@ class _HomeScreenState extends State<HomeScreen> {
   int _cartCount = 0;
   String _searchQuery = '';
   String _guestId = '';
+  Set<String> _cartProductIds = {}; // ✅ ADDED - Track products in cart
 
   @override
   void initState() {
     super.initState();
-    _loadGuestId();
-    _loadProducts();
+    _initializeApp();
+    
+    // Listen for auth changes (login/logout)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+authProvider.addListener(() {
+  print('🔄 AuthProvider listener triggered - refreshing cart count');
+  if (mounted) {
     _refreshCartCount();
-    _checkPendingOrder();
+  }
+});
+    });
+  }
+
+  Future<void> _initializeApp() async {
+    await _loadGuestId();
+    await _loadProducts();
+    
+    // Wait for auth to finish loading before fetching cart
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    int retries = 0;
+    while (authProvider.isLoading && retries < 30) {
+      await Future.delayed(Duration(milliseconds: 100));
+      retries++;
+    }
+    
+    await _refreshCartCount();
+    await _checkPendingOrder();
   }
 
   Future<void> _checkPendingOrder() async {
@@ -100,20 +138,55 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _loadGuestId() {
-    _guestId = 'guest_${DateTime.now().millisecondsSinceEpoch}';
+  Future<void> _loadGuestId() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? savedGuestId = prefs.getString('guest_id');
+    
+    if (savedGuestId == null) {
+      savedGuestId = 'guest_${DateTime.now().millisecondsSinceEpoch}';
+      await prefs.setString('guest_id', savedGuestId);
+    }
+    
+    setState(() {
+      _guestId = savedGuestId!;
+    });
+    print('🆔 Guest ID loaded: $_guestId');
   }
 
   Future<void> _refreshCartCount() async {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      print('🔄 _refreshCartCount - isLoggedIn: ${authProvider.isLoggedIn}');
+      print('🔄 _refreshCartCount - token exists: ${authProvider.token != null}');
+      
       String? guestIdToUse = authProvider.isLoggedIn ? null : _guestId;
       String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
       
       final response = await ApiService.getCart(guestId: guestIdToUse, token: tokenToUse);
-      if (response['success'] == true) {
+      
+      if (response['success'] == true && mounted) {
+        final newCount = response['data']?['totalItems'] ?? 0;
+        
+        // ✅ Extract product IDs from cart items
+        final items = response['data']?['items'] ?? [];
+        final Set<String> productIds = {};
+        for (var item in items) {
+          if (item['product'] != null) {
+            if (item['product'] is Map) {
+              productIds.add(item['product']['_id'].toString());
+            } else {
+              productIds.add(item['product'].toString());
+            }
+          }
+        }
+        
+        print('🛒 Cart count from API: $newCount');
+        print('🛒 Products in cart: $productIds');
+        
         setState(() {
-          _cartCount = response['data']?['totalItems'] ?? 0;
+          _cartCount = newCount;
+          _cartProductIds = productIds;
         });
       }
     } catch (e) {
@@ -175,7 +248,9 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) => CartScreen(
           guestId: guestIdToUse,
           token: tokenToUse,
-          onCartUpdate: _refreshCartCount,
+          onCartUpdate: () {
+            _refreshCartCount();
+          },
         ),
       ),
     );
@@ -280,6 +355,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildAppBar() {
+    print('🛒 Building AppBar with cartCount: $_cartCount');
     return HeaderSection(
       cartCount: _cartCount,
       onCartTap: _openCart,
@@ -443,6 +519,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         guestId: guestIdToUse,
                         token: tokenToUse,
                         onCartUpdate: _refreshCartCount,
+                        cartProductIds: _cartProductIds, // ✅ ADDED - Pass cart product IDs
                       );
                     },
                   ),

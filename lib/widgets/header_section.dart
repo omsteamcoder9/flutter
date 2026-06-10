@@ -68,6 +68,8 @@ class _HeaderSectionState extends State<HeaderSection> {
 
   @override
   Widget build(BuildContext context) {
+    print('🛒 HeaderSection build - cartCount: ${widget.cartCount}');
+
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 1024;
 
@@ -212,14 +214,16 @@ class _HeaderSectionState extends State<HeaderSection> {
                   itemCount: _categories.length + 2,
                   itemBuilder: (context, index) {
                     if (index == 0) {
-                      return _buildCategoryTab('ALL', index == 0);
+                      return _buildCategoryTab('ALL', index == 0, categoryId: '');
                     } else if (index == _categories.length + 1) {
                       return const SizedBox(width: 12);
                     } else {
                       final category = _categories[index - 1];
+                      // ✅ FIX: Pass the categoryId
                       return _buildCategoryTab(
                         category['name'].toUpperCase(),
                         false,
+                        categoryId: category['_id'].toString(),
                       );
                     }
                   },
@@ -247,27 +251,45 @@ class _HeaderSectionState extends State<HeaderSection> {
     );
   }
   
-  Widget _buildCategoryTab(String title, bool isActive) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      child: Chip(
-        label: Text(
-          title,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isActive ? Colors.white : const Color(0xFF5E0006),
+  // ✅ UPDATED: _buildCategoryTab with categoryId parameter
+  Widget _buildCategoryTab(String title, bool isActive, {required String categoryId}) {
+    return GestureDetector(
+      onTap: () {
+        if (categoryId.isNotEmpty) {
+          Navigator.pushNamed(
+            context,
+            '/category-products',
+            arguments: {
+              'categoryId': categoryId,
+              'categoryName': title,
+            },
+          );
+        } else if (title == 'ALL') {
+          // Navigate to all products page
+          Navigator.pushNamed(context, '/products');
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        child: Chip(
+          label: Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isActive ? Colors.white : const Color(0xFF5E0006),
+            ),
           ),
-        ),
-        backgroundColor: isActive ? const Color(0xFF5E0006) : const Color(0xFFF5F5F5),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(
-            color: isActive ? const Color(0xFF5E0006) : Colors.transparent,
-            width: 0,
+          backgroundColor: isActive ? const Color(0xFF5E0006) : const Color(0xFFF5F5F5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: isActive ? const Color(0xFF5E0006) : Colors.transparent,
+              width: 0,
+            ),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 4),
       ),
     );
   }

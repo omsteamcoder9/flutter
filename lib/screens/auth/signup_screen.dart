@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/auth_provider.dart';
 import 'otp_verification_screen.dart';
-import 'signup_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'login_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+class SignupScreen extends StatefulWidget {
   final String? guestId;
 
-  const LoginScreen({super.key, this.guestId});
+  const SignupScreen({super.key, this.guestId});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _phoneController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
@@ -37,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
     
     if (phoneNumber.length < 10) {
       setState(() {
-        _errorMessage = 'Please enter valid phone number';
+        _errorMessage = 'Please enter valid 10-digit phone number';
       });
       return;
     }
@@ -55,16 +55,37 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     if (result['success'] == true) {
+      // Check if user already exists
+      if (result['isNewUser'] == false) {
+        // Account already exists - redirect to login
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Account already exists. Please login.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LoginScreen(guestId: widget.guestId),
+          ),
+        );
+        return;
+      }
+      
+      // ✅ Get pending checkout flag
       final prefs = await SharedPreferences.getInstance();
       final hasPendingCheckout = prefs.getBool('pending_checkout') ?? false;
       
+      // New user - proceed with OTP verification
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => OtpVerificationScreen(
             otpSessionId: result['otpSessionId'],
             phoneNumber: phoneNumber,
-            isNewUser: result['isNewUser'],
+            isNewUser: true,
             guestId: widget.guestId,
             hasPendingCheckout: hasPendingCheckout,
           ),
@@ -77,11 +98,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }  // ✅ THIS CLOSING BRACKET WAS MISSING
 
-  void _goToSignup() {
+  void _goToLogin() {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => SignupScreen(guestId: widget.guestId),
+        builder: (context) => LoginScreen(guestId: widget.guestId),
       ),
     );
   }
@@ -98,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Log In',
+          'Sign Up',
           style: TextStyle(
             color: Color(0xFF5E0006),
             fontWeight: FontWeight.bold,
@@ -115,7 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
               
               const Center(
                 child: Text(
-                  'Welcome Back!',
+                  'Create Account',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -126,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               const Center(
                 child: Text(
-                  'Login to access your account',
+                  'Sign up with your phone number',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -214,7 +235,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         )
                       : const Text(
-                          'Continue',
+                          'Sign Up with OTP',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -229,13 +250,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text(
-                    "Don't have an account? ",
+                    'Already have an account? ',
                     style: TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                   GestureDetector(
-                    onTap: _goToSignup,
+                    onTap: _goToLogin,
                     child: const Text(
-                      'Create Account',
+                      'Sign In',
                       style: TextStyle(
                         color: Color(0xFF9B0F06),
                         fontWeight: FontWeight.bold,
@@ -246,7 +267,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               
-              const SizedBox(height: 32),
+              const SizedBox(height: 48),
               
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,

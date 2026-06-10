@@ -8,6 +8,7 @@ class ProductCard extends StatelessWidget {
   final String? guestId;
   final String? token;
   final VoidCallback? onCartUpdate;
+  final Set<String>? cartProductIds; // ✅ ADD THIS - Set of product IDs in cart
 
   const ProductCard({
     required this.product,
@@ -15,6 +16,7 @@ class ProductCard extends StatelessWidget {
     this.guestId,
     this.token,
     this.onCartUpdate,
+    this.cartProductIds, // ✅ ADD THIS
     super.key,
   });
 
@@ -54,6 +56,9 @@ class ProductCard extends StatelessWidget {
     final originalPrice = (product['originalPrice'] ?? basePrice * 1.2).toDouble();
     final isOutOfStock = (product['stock'] ?? 0) <= 0;
     final imageUrl = _getImageUrl();
+    
+    // ✅ Check if product is in cart
+    final bool isInCart = cartProductIds != null && cartProductIds!.contains(product['_id']);
     
     String weightLabel = 'ESSENTIALS';
     if (product['variants'] != null && product['variants'].isNotEmpty) {
@@ -216,32 +221,40 @@ class ProductCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      // Add To Cart Button
-                      GestureDetector(
-                        onTap: isOutOfStock ? null : onAddToCart,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isOutOfStock ? Colors.grey.shade400 : const Color(0xFF9B0F06),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 12),
-                              const SizedBox(width: 4),
-                              Text(
-                                isOutOfStock ? 'Out Of Stock' : 'Add To Cart',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                 // Add To Cart Button - UPDATED with Added state (no color change)
+GestureDetector(
+  onTap: (isOutOfStock || isInCart) ? null : onAddToCart,
+  child: Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: isOutOfStock 
+          ? Colors.grey.shade400 
+          : const Color(0xFF9B0F06), // Same red color for both "Add" and "Added"
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          isInCart ? Icons.check : Icons.shopping_bag_outlined,
+          color: Colors.white,
+          size: 12,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          isOutOfStock 
+              ? 'Out Of Stock' 
+              : (isInCart ? 'In Cart' : 'Add To Cart'), // Only text changes to "Added"
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    ),
+  ),
+),
                     ],
                   ),
                 ],

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../widgets/product_card.dart';
 import 'dart:convert';
+import '../screens/auth/signup_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final String? productId;
@@ -276,43 +277,59 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
-  Future<void> _buyNow() async {
-    if (_isOutOfStock()) return;
+Future<void> _buyNow() async {
+  if (_isOutOfStock()) return;
 
-    setState(() {
-      _isAddingToCart = true;
-    });
+  setState(() {
+    _isAddingToCart = true;
+  });
 
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      final buyNowOrder = {
-        'productId': _product!['_id'],
-        'productName': _product!['name'],
-        'quantity': _quantity,
-        'variantId': _selectedVariant?['_id'] ?? '',
-        'variantName': _selectedVariant?['variantName'] ?? '',
-        'price': _getCurrentPrice(),
-        'imageUrl': _getCurrentImages().isNotEmpty ? _getImageUrl(_getCurrentImages()[0]) : '',
-      };
-      
-      await prefs.setString('buy_now_order', jsonEncode(buyNowOrder));
-      
-      if (mounted) {
-        Navigator.pushNamed(context, '/checkout');
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isAddingToCart = false;
-        });
-      }
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    
+    final buyNowOrder = {
+      'productId': _product!['_id'],
+      'productName': _product!['name'],
+      'quantity': _quantity,
+      'variantId': _selectedVariant?['_id'] ?? '',
+      'variantName': _selectedVariant?['variantName'] ?? '',
+      'price': _getCurrentPrice(),
+      'imageUrl': _getCurrentImages().isNotEmpty ? _getImageUrl(_getCurrentImages()[0]) : '',
+    };
+    
+    await prefs.setString('buy_now_order', jsonEncode(buyNowOrder));
+    await prefs.setBool('pending_checkout', true);  // ✅ ADD THIS LINE
+
+    
+    // ✅ Check if user is logged in
+    final token = prefs.getString('auth_token');
+    
+    if (mounted) {
+ if (token == null || token.isEmpty) {
+  // Guest user - redirect to signup WITH guestId
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => SignupScreen(guestId: _guestId),  // ✅ Pass guestId
+    ),
+  );
+} else {
+  // Logged in user - go directly to checkout
+  Navigator.pushNamed(context, '/checkout');
+}
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+    );
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isAddingToCart = false;
+      });
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {

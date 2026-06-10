@@ -1,4 +1,3 @@
-// lib/screens/checkout_screen.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +6,7 @@ import '../providers/auth_provider.dart';
 import 'package:http/http.dart' as http;
 import 'order_success_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final String? guestId;
@@ -38,6 +38,61 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String _paymentMethod = 'cod';
   bool _isLoading = false;
   String? _errorMessage;
+  
+  // Cart data
+  Map<String, dynamic> _cart = {'items': [], 'totalItems': 0, 'totalPrice': 0};
+  
+  // Buy Now state
+  Map<String, dynamic>? _buyNowItem;
+  bool _isBuyNowMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBuyNowOrder();
+    _loadCartData();
+  }
+
+  Future<void> _checkBuyNowOrder() async {
+    final prefs = await SharedPreferences.getInstance();
+    final buyNowJson = prefs.getString('buy_now_order');
+    
+    if (buyNowJson != null && buyNowJson.isNotEmpty) {
+      try {
+        final buyNowData = jsonDecode(buyNowJson);
+        setState(() {
+          _buyNowItem = buyNowData;
+          _isBuyNowMode = true;
+        });
+        print('✅ Buy Now mode detected: ${_buyNowItem?['productName']}');
+      } catch (e) {
+        print('Error parsing buy now order: $e');
+      }
+    }
+  }
+
+  Future<void> _loadCartData() async {
+    if (_isBuyNowMode) return;
+    
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = authProvider.token;
+      final isLoggedIn = authProvider.isLoggedIn;
+      
+      final response = await ApiService.getCart(
+        guestId: isLoggedIn ? null : widget.guestId,
+        token: token,
+      );
+      
+      if (response['success'] == true && mounted) {
+        setState(() {
+          _cart = response['data'] ?? {'items': [], 'totalItems': 0, 'totalPrice': 0};
+        });
+      }
+    } catch (e) {
+      print('Error loading cart: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -50,6 +105,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _postalCodeController.dispose();
     _countryController.dispose();
     super.dispose();
+  }
+
+  double _getSubtotal() {
+    if (_isBuyNowMode && _buyNowItem != null) {
+      return (_buyNowItem!['price'] ?? 0) * (_buyNowItem!['quantity'] ?? 1);
+    }
+    return (_cart['totalPrice'] ?? 0).toDouble();
+  }
+
+  int _getItemCount() {
+    if (_isBuyNowMode && _buyNowItem != null) {
+      return _buyNowItem!['quantity'] ?? 1;
+    }
+    return _cart['totalItems'] ?? 0;
   }
 
   Future<void> _placeOrder() async {
@@ -105,6 +174,54 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final token = authProvider.token;
       final isLoggedIn = authProvider.isLoggedIn;
 
+      // Prepare products array based on Buy Now mode
+      List<Map<String, dynamic>> products = [];
+      
+      if (_isBuyNowMode && _buyNowItem != null) {
+        // ✅ Buy Now mode - Use only the selected product
+        products = [
+          {
+            'product': _buyNowItem!['productId'],
+            'variantId': _buyNowItem!['variantId'] ?? '',
+            'variantName': _buyNowItem!['variantName'] ?? '',
+            'price': _buyNowItem!['price'],
+            'quantity': _buyNowItem!['quantity'],
+          }
+        ];
+        print('🛒 Buy Now mode - Ordering 1 product: ${_buyNowItem!['productName']}');
+      } else {
+        // Normal checkout - Fetch cart items from API
+        print('🛒 Normal checkout - Fetching cart items');
+        final cartResponse = await ApiService.getCart(
+          guestId: widget.guestId,
+          token: token,
+        );
+        
+        if (cartResponse['success'] == true && cartResponse['data'] != null) {
+          final cartItems = cartResponse['data']['items'] ?? [];
+          for (var item in cartItems) {
+            String productId;
+            if (item['product'] is Map) {
+              productId = item['product']['_id'];
+            } else {
+              productId = item['product'].toString();
+            }
+            
+            products.add({
+              'product': productId,
+              'variantId': item['variantId'] ?? '',
+              'variantName': item['variantName'] ?? '',
+              'price': item['price'],
+              'quantity': item['quantity'],
+            });
+          }
+        }
+      }
+      
+      if (products.isEmpty) {
+        throw Exception('No items to checkout');
+      }
+
       final orderData = {
         'shippingAddress': {
           'name': _nameController.text.trim(),
@@ -117,7 +234,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           'email': _emailController.text.trim(),
         },
         'paymentMethod': _paymentMethod,
+        'products': products,
       };
+      
+      // ✅ Add skipCartClear for Buy Now mode
+      if (_isBuyNowMode) {
+        orderData['skipCartClear'] = true;
+      }
 
       final url = '${ApiService.baseUrl}/orders';
       final response = await http.post(
@@ -132,10 +255,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode != 201 || responseData['success'] != true) {
-        // Show backend error message
         final errorMsg = responseData['message'] ?? 'Failed to create order';
         
-        // Check for street not found error
         if (responseData['code'] == 'STREET_NOT_FOUND') {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -159,20 +280,38 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final order = responseData['order'];
       final requiresPayment = responseData['requiresPayment'] ?? false;
 
-      if (!requiresPayment) {
-        // COD order
-        widget.onOrderPlaced();
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => OrderSuccessScreen(
-                orderId: order['orderId'],
-                orderData: order,
-              ),
-            ),
-          );
-        }
+      // ✅ Clear Buy Now order from SharedPreferences after successful order
+      if (_isBuyNowMode) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('buy_now_order');
+        await prefs.remove('pending_checkout');
+      }
+
+if (!requiresPayment) {
+  // COD order
+  print('🔵 Calling widget.onOrderPlaced() for COD order');
+  widget.onOrderPlaced();
+  print('🔵 widget.onOrderPlaced() completed');
+  
+  // ✅ FORCE refresh cart count by clearing local state
+  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  if (authProvider.isLoggedIn) {
+    // Manually trigger refresh
+    authProvider.notifyListeners();
+  }
+
+  if (mounted) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => OrderSuccessScreen(
+          orderId: order['orderId'],
+          orderData: order,
+        ),
+      ),
+    );
+  }
+}
       } else {
         // Razorpay payment - open browser
         await _openRazorpayPayment(order);
@@ -286,10 +425,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final subtotal = _getSubtotal();
+    final tax = subtotal * 0.05;
+    final total = subtotal + tax;
+    final itemCount = _getItemCount();
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Checkout'),
+        title: Text(_isBuyNowMode ? 'Buy Now' : 'Checkout'),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF5E0006),
         elevation: 0,
@@ -303,6 +447,119 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Buy Now Banner
+                  if (_isBuyNowMode && _buyNowItem != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF9B0F06).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF9B0F06).withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.flash_on, color: Color(0xFF9B0F06), size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '⚡ Buy Now Mode • Checking out: ${_buyNowItem!['productName']}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF5E0006),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
+                  // Order Summary Section
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Order Summary',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF5E0006),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (_isBuyNowMode && _buyNowItem != null)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${_buyNowItem!['productName']} x ${_buyNowItem!['quantity']}',
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              ),
+                              Text(
+                                '₹${_buyNowItem!['price'] * _buyNowItem!['quantity']}',
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          )
+                        else
+                          Text(
+                            '${itemCount} item${itemCount != 1 ? 's' : ''}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        const SizedBox(height: 12),
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Subtotal'),
+                            Text('₹${subtotal.toStringAsFixed(0)}'),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Shipping'),
+                            const Text('FREE', style: TextStyle(color: Color(0xFFD53E0F))),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Tax (5%)'),
+                            Text('₹${tax.toStringAsFixed(0)}'),
+                          ],
+                        ),
+                        const Divider(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Total',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            Text(
+                              '₹${total.toStringAsFixed(0)}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF9B0F06)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  
                   // Shipping Address Section
                   Container(
                     padding: const EdgeInsets.all(16),

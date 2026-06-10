@@ -297,19 +297,31 @@ static Future<Map<String, dynamic>?> getProductBySlug(String slug) async {
   
   // ========== CART METHODS WITH TOKEN SUPPORT ==========
   
-  static Future<dynamic> getCart({String? guestId, String? token}) async {
-    try {
-      String endpoint = '/cart';
-      if (guestId != null && guestId.isNotEmpty && (token == null || token.isEmpty)) {
+static Future<dynamic> getCart({String? guestId, String? token}) async {
+  try {
+    String endpoint = '/cart';
+    
+    print('🛒 getCart - token exists: ${token != null}');
+    print('🛒 getCart - guestId: $guestId');
+    
+    // If token exists, user is logged in - DO NOT add guestId
+    if (token != null && token.isNotEmpty) {
+      endpoint = '/cart';
+      print('🛒 Using authenticated endpoint: $endpoint');
+    } else {
+      if (guestId != null && guestId.isNotEmpty) {
         endpoint = '/cart?guestId=$guestId';
+        print('🛒 Using guest endpoint: $endpoint');
       }
-      final response = await getWithAuth(endpoint, token: token);
-      return response;
-    } catch (e) {
-      print('Error fetching cart: $e');
-      return {'data': {'items': [], 'totalItems': 0, 'totalPrice': 0}};
     }
+    
+    final response = await getWithAuth(endpoint, token: token);
+    return response;
+  } catch (e) {
+    print('Error fetching cart: $e');
+    return {'data': {'items': [], 'totalItems': 0, 'totalPrice': 0}};
   }
+}
   
   static Future<dynamic> updateCartItem(String itemId, int quantity, {String? guestId, String? token}) async {
     try {

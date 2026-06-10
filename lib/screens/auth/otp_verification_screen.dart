@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-
+import '../checkout_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 class OtpVerificationScreen extends StatefulWidget {
   final String otpSessionId;
   final String phoneNumber;
   final bool isNewUser;
   final String? guestId;
+    final bool hasPendingCheckout;  // ✅ Add this
+
 
   const OtpVerificationScreen({
     super.key,
@@ -14,6 +17,8 @@ class OtpVerificationScreen extends StatefulWidget {
     required this.phoneNumber,
     required this.isNewUser,
     this.guestId,
+        this.hasPendingCheckout = false,  // ✅ Add this with default
+
   });
 
   @override
@@ -77,14 +82,43 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       _isLoading = false;
     });
 
-    if (result['success'] == true) {
-      Navigator.popUntil(context, (route) => route.isFirst);
+  if (result['success'] == true) {
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(widget.isNewUser ? 'Account created!' : 'Login successful!'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 1),
+      ),
+    );
+    
+    // ✅ Check if pending checkout exists
+    if (widget.hasPendingCheckout) {
+      // Clear the pending flag
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('pending_checkout');
+      
+      // Navigate to Checkout
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CheckoutScreen(
+              guestId: null,
+              onOrderPlaced: () {},
+            ),
+          ),
+        );
+      }
     } else {
-      setState(() {
-        _errorMessage = result['message'];
-      });
+      // Normal flow - go to Home
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/');
+      }
     }
   }
+}
+
 
   Future<void> _resendOtp() async {
     if (!_canResend) return;

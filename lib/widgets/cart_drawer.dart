@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
-import '../screens/auth/login_screen.dart';
 import '../screens/checkout_screen.dart';
+import '../screens/auth/signup_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CartScreen extends StatefulWidget {
   final VoidCallback onCartUpdate;
@@ -178,15 +179,15 @@ class _CartScreenState extends State<CartScreen> {
                     ],
                   ),
                 )
-              : SingleChildScrollView(  // ← Changed from Column to SingleChildScrollView
+              : SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Cart Items List
                       ListView.builder(
-                        shrinkWrap: true,  // Important: Makes ListView take only needed space
-                        physics: const NeverScrollableScrollPhysics(),  // Disable inner scrolling
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
                         itemCount: items.length,
                         itemBuilder: (context, index) {
                           final item = items[index];
@@ -326,7 +327,7 @@ class _CartScreenState extends State<CartScreen> {
                       
                       const SizedBox(height: 24),
                       
-                      // Price Summary Section (moved inside scroll view)
+                      // Price Summary Section
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -372,63 +373,71 @@ class _CartScreenState extends State<CartScreen> {
                       
                       const SizedBox(height: 24),
                       
-                      // Proceed to Checkout Button (moved inside scroll view, at the bottom)
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                            
-                            if (authProvider.isLoggedIn) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CheckoutScreen(
-                                    guestId: null,
-                                    onOrderPlaced: widget.onCartUpdate,
-                                  ),
-                                ),
-                              );
-                            } else {
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => LoginScreen(guestId: widget.guestId),
-                                ),
-                              );
-                              
-                              if (authProvider.isLoggedIn) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => CheckoutScreen(
-                                      guestId: null,
-                                      onOrderPlaced: widget.onCartUpdate,
-                                    ),
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFD53E0F),  // Same as checkout screen
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            'Proceed to Checkout',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
+                 // Proceed to Checkout Button
+SizedBox(
+  width: double.infinity,
+  child: ElevatedButton(
+    onPressed: () async {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final prefs = await SharedPreferences.getInstance();
+      
+      if (authProvider.isLoggedIn) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CheckoutScreen(
+              guestId: null,
+              onOrderPlaced: widget.onCartUpdate,
+            ),
+          ),
+        );
+      } else {
+        // ✅ Save pending checkout flag
+        await prefs.setBool('pending_checkout', true);
+        
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SignupScreen(guestId: widget.guestId),
+          ),
+        );
+        
+        if (authProvider.isLoggedIn) {
+          final hasPendingCheckout = prefs.getBool('pending_checkout') ?? false;
+          if (hasPendingCheckout) {
+            await prefs.remove('pending_checkout');
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CheckoutScreen(
+                  guestId: null,
+                  onOrderPlaced: widget.onCartUpdate,
+                ),
+              ),
+            );
+          }
+        }
+      }
+    },
+    style: ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFFD53E0F),
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+    ),
+    child: const Text(
+      'Proceed to Checkout',
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+    ),
+  ),
+),
                       
-                      const SizedBox(height: 16),  // Extra bottom padding
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
