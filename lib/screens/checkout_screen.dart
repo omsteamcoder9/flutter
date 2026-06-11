@@ -178,7 +178,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       List<Map<String, dynamic>> products = [];
       
       if (_isBuyNowMode && _buyNowItem != null) {
-        // ✅ Buy Now mode - Use only the selected product
+        // Buy Now mode - Use only the selected product
         products = [
           {
             'product': _buyNowItem!['productId'],
@@ -237,7 +237,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'products': products,
       };
       
-      // ✅ Add skipCartClear for Buy Now mode
+      // Add skipCartClear for Buy Now mode
       if (_isBuyNowMode) {
         orderData['skipCartClear'] = true;
       }
@@ -280,38 +280,36 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final order = responseData['order'];
       final requiresPayment = responseData['requiresPayment'] ?? false;
 
-      // ✅ Clear Buy Now order from SharedPreferences after successful order
+      // Clear Buy Now order from SharedPreferences after successful order
       if (_isBuyNowMode) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('buy_now_order');
         await prefs.remove('pending_checkout');
       }
 
-if (!requiresPayment) {
-  // COD order
-  print('🔵 Calling widget.onOrderPlaced() for COD order');
-  widget.onOrderPlaced();
-  print('🔵 widget.onOrderPlaced() completed');
-  
-  // ✅ FORCE refresh cart count by clearing local state
-  final authProvider = Provider.of<AuthProvider>(context, listen: false);
-  if (authProvider.isLoggedIn) {
-    // Manually trigger refresh
-    authProvider.notifyListeners();
-  }
+      if (!requiresPayment) {
+        // COD order
+        print('🔵 Calling widget.onOrderPlaced() for COD order');
+        widget.onOrderPlaced();
+        print('🔵 widget.onOrderPlaced() completed');
+        
+        // Force refresh cart count
+        final authProviderRefresh = Provider.of<AuthProvider>(context, listen: false);
+        if (authProviderRefresh.isLoggedIn) {
+          authProviderRefresh.notifyListeners();
+        }
 
-  if (mounted) {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => OrderSuccessScreen(
-          orderId: order['orderId'],
-          orderData: order,
-        ),
-      ),
-    );
-  }
-}
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OrderSuccessScreen(
+                orderId: order['orderId'],
+                orderData: order,
+              ),
+            ),
+          );
+        }
       } else {
         // Razorpay payment - open browser
         await _openRazorpayPayment(order);
@@ -405,6 +403,12 @@ if (!requiresPayment) {
       print('🔵 NAVIGATING TO ORDER SUCCESS SCREEN');
       widget.onOrderPlaced();
       
+      // Force refresh cart count
+      final authProviderRefresh = Provider.of<AuthProvider>(context, listen: false);
+      if (authProviderRefresh.isLoggedIn) {
+        authProviderRefresh.notifyListeners();
+      }
+      
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -438,264 +442,260 @@ if (!requiresPayment) {
         foregroundColor: const Color(0xFF5E0006),
         elevation: 0,
       ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Buy Now Banner
-                  if (_isBuyNowMode && _buyNowItem != null)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF9B0F06).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF9B0F06).withOpacity(0.3)),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Buy Now Banner
+              if (_isBuyNowMode && _buyNowItem != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF9B0F06).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF9B0F06).withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.flash_on, color: Color(0xFF9B0F06), size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '⚡ Buy Now Mode • Checking out: ${_buyNowItem!['productName']}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF5E0006),
+                          ),
+                        ),
                       ),
-                      child: Row(
+                    ],
+                  ),
+                ),
+              
+              // Order Summary Section
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Order Summary',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF5E0006),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_isBuyNowMode && _buyNowItem != null)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Icon(Icons.flash_on, color: Color(0xFF9B0F06), size: 20),
-                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              '⚡ Buy Now Mode • Checking out: ${_buyNowItem!['productName']}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF5E0006),
-                              ),
+                              '${_buyNowItem!['productName']} x ${_buyNowItem!['quantity']}',
+                              style: const TextStyle(fontSize: 14),
                             ),
                           ),
+                          Text(
+                            '₹${(_buyNowItem!['price'] * _buyNowItem!['quantity']).toInt()}',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                          ),
                         ],
+                      )
+                    else
+                      Text(
+                        '${itemCount} item${itemCount != 1 ? 's' : ''}',
+                        style: const TextStyle(fontSize: 14),
                       ),
+                    const SizedBox(height: 12),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Subtotal'),
+                        Text('₹${subtotal.toInt()}'),
+                      ],
                     ),
-                  
-                  // Order Summary Section
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Shipping'),
+                        const Text('FREE', style: TextStyle(color: Color(0xFFD53E0F))),
+                      ],
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Tax (5%)'),
+                        Text('₹${tax.toInt()}'),
+                      ],
+                    ),
+                    const Divider(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Order Summary',
+                          'Total',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        Text(
+                          '₹${total.toInt()}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF9B0F06)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Shipping Address Section
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Shipping Address',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF5E0006),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(_nameController, 'Full Name', Icons.person),
+                    const SizedBox(height: 12),
+                    _buildTextField(_phoneController, 'Phone Number', Icons.phone, keyboardType: TextInputType.phone),
+                    const SizedBox(height: 12),
+                    _buildTextField(_emailController, 'Email Address', Icons.email, keyboardType: TextInputType.emailAddress),
+                    const SizedBox(height: 12),
+                    _buildTextField(_streetController, 'Street Address', Icons.location_on),
+                    const SizedBox(height: 12),
+                    _buildTextField(_cityController, 'City', Icons.location_city),
+                    const SizedBox(height: 12),
+                    _buildTextField(_stateController, 'State', Icons.map),
+                    const SizedBox(height: 12),
+                    _buildTextField(_postalCodeController, 'Postal Code', Icons.code, keyboardType: TextInputType.number),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Payment Method Section
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Payment Method',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF5E0006),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    RadioListTile<String>(
+                      title: const Text('Cash on Delivery'),
+                      value: 'cod',
+                      groupValue: _paymentMethod,
+                      onChanged: (value) {
+                        setState(() {
+                          _paymentMethod = value!;
+                        });
+                      },
+                      activeColor: const Color(0xFFD53E0F),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('Razorpay (Card/UPI/NetBanking)'),
+                      value: 'razorpay',
+                      groupValue: _paymentMethod,
+                      onChanged: (value) {
+                        setState(() {
+                          _paymentMethod = value!;
+                        });
+                      },
+                      activeColor: const Color(0xFFD53E0F),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              if (_errorMessage != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+
+              const SizedBox(height: 24),
+
+              // Place Order Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _placeOrder,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD53E0F),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Place Order',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF5E0006),
+                            color: Colors.white,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        if (_isBuyNowMode && _buyNowItem != null)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  '${_buyNowItem!['productName']} x ${_buyNowItem!['quantity']}',
-                                  style: const TextStyle(fontSize: 14),
-                                ),
-                              ),
-                              Text(
-                                '₹${_buyNowItem!['price'] * _buyNowItem!['quantity']}',
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          )
-                        else
-                          Text(
-                            '${itemCount} item${itemCount != 1 ? 's' : ''}',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        const SizedBox(height: 12),
-                        const Divider(),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Subtotal'),
-                            Text('₹${subtotal.toStringAsFixed(0)}'),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Shipping'),
-                            const Text('FREE', style: TextStyle(color: Color(0xFFD53E0F))),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Tax (5%)'),
-                            Text('₹${tax.toStringAsFixed(0)}'),
-                          ],
-                        ),
-                        const Divider(),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Total',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            Text(
-                              '₹${total.toStringAsFixed(0)}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF9B0F06)),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  // Shipping Address Section
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Shipping Address',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF5E0006),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(_nameController, 'Full Name', Icons.person),
-                        const SizedBox(height: 12),
-                        _buildTextField(_phoneController, 'Phone Number', Icons.phone, keyboardType: TextInputType.phone),
-                        const SizedBox(height: 12),
-                        _buildTextField(_emailController, 'Email Address', Icons.email, keyboardType: TextInputType.emailAddress),
-                        const SizedBox(height: 12),
-                        _buildTextField(_streetController, 'Street Address', Icons.location_on),
-                        const SizedBox(height: 12),
-                        _buildTextField(_cityController, 'City', Icons.location_city),
-                        const SizedBox(height: 12),
-                        _buildTextField(_stateController, 'State', Icons.map),
-                        const SizedBox(height: 12),
-                        _buildTextField(_postalCodeController, 'Postal Code', Icons.code, keyboardType: TextInputType.number),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Payment Method Section
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Payment Method',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF5E0006),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        RadioListTile(
-                          title: const Text('Cash on Delivery'),
-                          value: 'cod',
-                          groupValue: _paymentMethod,
-                          onChanged: (value) {
-                            setState(() {
-                              _paymentMethod = value.toString();
-                            });
-                          },
-                          activeColor: const Color(0xFFD53E0F),
-                        ),
-                        RadioListTile(
-                          title: const Text('Razorpay (Card/UPI/NetBanking)'),
-                          value: 'razorpay',
-                          groupValue: _paymentMethod,
-                          onChanged: (value) {
-                            setState(() {
-                              _paymentMethod = value.toString();
-                            });
-                          },
-                          activeColor: const Color(0xFFD53E0F),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  if (_errorMessage != null)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _errorMessage!,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                    ),
-
-                  const SizedBox(height: 24),
-
-                  // Place Order Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _placeOrder,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD53E0F),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              'Place Order',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
