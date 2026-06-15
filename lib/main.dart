@@ -9,14 +9,17 @@ import 'widgets/category_section.dart';
 import 'widgets/header_section.dart';
 import 'widgets/footer_section.dart';
 import 'widgets/cart_drawer.dart';
+import 'widgets/bottom_nav_bar.dart';
 import 'services/api_service.dart';
 import 'providers/auth_provider.dart';
+import 'providers/cart_provider.dart';
 import 'screens/order_success_screen.dart';
 import 'screens/product_detail_screen.dart';
 import 'screens/checkout_screen.dart';
 import 'screens/category_products_screen.dart';
 import 'screens/auth/login_screen.dart'; 
-import 'screens/auth/signup_screen.dart'; // Add this import
+import 'screens/auth/signup_screen.dart';
+import 'screens/profile/profile_screen.dart';
 
 void main() async {
   await dotenv.load();
@@ -24,6 +27,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: MyApp(),
     ),
@@ -42,25 +46,24 @@ class MyApp extends StatelessWidget {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: HomeScreen(),
-   routes: {
-  '/product-detail': (context) => ProductDetailScreen(
-    productId: ModalRoute.of(context)!.settings.arguments as String,
-  ),
-  '/checkout': (context) => CheckoutScreen(
-    guestId: null,
-    onOrderPlaced: () {},
-  ),
-    '/login': (context) => LoginScreen(),  // ✅ ADD THIS LINE
-'/signup': (context) => SignupScreen(),
-
-  '/category-products': (context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    return CategoryProductsScreen(
-      categoryId: args['categoryId'],
-      categoryName: args['categoryName'],
-    );
-  },
-},
+      routes: {
+        '/product-detail': (context) => ProductDetailScreen(
+          productId: ModalRoute.of(context)!.settings.arguments as String,
+        ),
+        '/checkout': (context) => CheckoutScreen(
+          guestId: null,
+          onOrderPlaced: () {},
+        ),
+        '/login': (context) => LoginScreen(),
+        '/signup': (context) => SignupScreen(),
+        '/category-products': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return CategoryProductsScreen(
+            categoryId: args['categoryId'],
+            categoryName: args['categoryName'],
+          );
+        },
+      },
       debugShowCheckedModeBanner: false,
     );
   }
@@ -78,42 +81,53 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _filteredProducts = [];
   bool _isLoading = true;
   String _error = '';
-  int _cartCount = 0;
   String _searchQuery = '';
   String _guestId = '';
-  Set<String> _cartProductIds = {}; // ✅ ADDED - Track products in cart
+  int _currentIndex = 0;
+  bool _isInitialized = false;
+
+  late CartProvider _cartProvider;
+  late AuthProvider _authProvider;
 
   @override
   void initState() {
     super.initState();
     _initializeApp();
     
-    // Listen for auth changes (login/logout)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-authProvider.addListener(() {
-  print('🔄 AuthProvider listener triggered - refreshing cart count');
-  if (mounted) {
-    _refreshCartCount();
-  }
-});
+      authProvider.addListener(() {
+        print('🔄 AuthProvider listener triggered - refreshing cart count');
+        if (mounted) {
+          _cartProvider.refreshCartCount();
+        }
+      });
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _cartProvider = Provider.of<CartProvider>(context, listen: false);
+    _authProvider = Provider.of<AuthProvider>(context, listen: false);
   }
 
   Future<void> _initializeApp() async {
     await _loadGuestId();
     await _loadProducts();
     
-    // Wait for auth to finish loading before fetching cart
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_isInitialized) {
+        _cartProvider.initialize(
+          guestId: _guestId,
+          token: _authProvider.isLoggedIn ? _authProvider.token : null,
+          isLoggedIn: _authProvider.isLoggedIn,
+        );
+        _cartProvider.refreshCartCount();
+        _isInitialized = true;
+      }
+    });
     
-    int retries = 0;
-    while (authProvider.isLoading && retries < 30) {
-      await Future.delayed(Duration(milliseconds: 100));
-      retries++;
-    }
-    
-    await _refreshCartCount();
     await _checkPendingOrder();
   }
 
@@ -153,58 +167,15 @@ authProvider.addListener(() {
     print('🆔 Guest ID loaded: $_guestId');
   }
 
-  Future<void> _refreshCartCount() async {
-    try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
-      print('🔄 _refreshCartCount - isLoggedIn: ${authProvider.isLoggedIn}');
-      print('🔄 _refreshCartCount - token exists: ${authProvider.token != null}');
-      
-      String? guestIdToUse = authProvider.isLoggedIn ? null : _guestId;
-      String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
-      
-      final response = await ApiService.getCart(guestId: guestIdToUse, token: tokenToUse);
-      
-      if (response['success'] == true && mounted) {
-        final newCount = response['data']?['totalItems'] ?? 0;
-        
-        // ✅ Extract product IDs from cart items
-        final items = response['data']?['items'] ?? [];
-        final Set<String> productIds = {};
-        for (var item in items) {
-          if (item['product'] != null) {
-            if (item['product'] is Map) {
-              productIds.add(item['product']['_id'].toString());
-            } else {
-              productIds.add(item['product'].toString());
-            }
-          }
-        }
-        
-        print('🛒 Cart count from API: $newCount');
-        print('🛒 Products in cart: $productIds');
-        
-        setState(() {
-          _cartCount = newCount;
-          _cartProductIds = productIds;
-        });
-      }
-    } catch (e) {
-      print('Error refreshing cart: $e');
-    }
-  }
-
   Future<void> _loadProducts() async {
     try {
       final response = await ApiService.get('/products');
-      print('Response received: ${response['data']?.length ?? 0} products');
       setState(() {
         _products = response['data'] ?? [];
         _filteredProducts = _products;
         _isLoading = false;
       });
     } catch (e) {
-      print('Error: $e');
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -234,13 +205,8 @@ authProvider.addListener(() {
   }
 
   void _openCart() {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    String? guestIdToUse = authProvider.isLoggedIn ? null : _guestId;
-    String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
-    
-    print('🔵 _openCart called');
-    print('   - isLoggedIn: ${authProvider.isLoggedIn}');
-    print('   - tokenToUse: $tokenToUse');
+    String? guestIdToUse = _authProvider.isLoggedIn ? null : _guestId;
+    String? tokenToUse = _authProvider.isLoggedIn ? _authProvider.token : null;
     
     Navigator.push(
       context,
@@ -249,7 +215,7 @@ authProvider.addListener(() {
           guestId: guestIdToUse,
           token: tokenToUse,
           onCartUpdate: () {
-            _refreshCartCount();
+            _cartProvider.refreshCartCount();
           },
         ),
       ),
@@ -258,38 +224,25 @@ authProvider.addListener(() {
 
   void _addToCart(dynamic product) async {
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      String? guestIdToUse = authProvider.isLoggedIn ? null : _guestId;
-      String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('buy_now_order');
+      await prefs.remove('pending_checkout');
       
-      String variantId = '';
-      if (product['variants'] != null && product['variants'].isNotEmpty) {
-        variantId = product['variants'][0]['_id'] ?? '';
-      }
-      
-      final response = await ApiService.addToCart(
-        product['_id'], 
-        1, 
-        variantId,
-        guestId: guestIdToUse,
-        token: tokenToUse,
+      await _cartProvider.addToCart(
+        product,
+        guestId: _guestId,
+        token: _authProvider.isLoggedIn ? _authProvider.token : null,
+        isLoggedIn: _authProvider.isLoggedIn,
       );
       
-      if (response['success'] == true) {
-        await _refreshCartCount();
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${product['name']} added to cart'),
-            duration: Duration(seconds: 1),
-            backgroundColor: Color(0xFF9B0F06),
-          ),
-        );
-      } else {
-        throw Exception('Failed to add to cart');
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${product['name']} added to cart'),
+          duration: Duration(seconds: 1),
+          backgroundColor: Color(0xFF9B0F06),
+        ),
+      );
     } catch (e) {
-      print('Error adding to cart: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to add to cart'),
@@ -300,8 +253,25 @@ authProvider.addListener(() {
     }
   }
 
+  void _showAuthDialog() {
+    if (_authProvider.isLoggedIn) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const SignupScreen()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final cartCount = Provider.of<CartProvider>(context).cartCount;
+    final cartProductIds = Provider.of<CartProvider>(context).cartProductIds;
+    
     return Scaffold(
       key: _scaffoldKey,
       resizeToAvoidBottomInset: false,
@@ -333,35 +303,53 @@ authProvider.addListener(() {
                   ? Center(child: Text('No products found'))
                   : Column(
                       children: [
-                        _buildAppBar(),
+                        _buildAppBar(cartCount),
                         Expanded(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              children: [
-                                _buildDeliveryBanner(),
-                                _buildHeroSection(),
-                                _buildExploreSection(),
-                                _buildWhyChooseUs(),
-                                _buildTestimonialsSection(),
-                                _buildFaqSection(),
-                                FooterSection(),
-                              ],
-                            ),
+                          child: IndexedStack(
+                            index: _currentIndex,
+                            children: [
+                              SingleChildScrollView(
+                                child: Column(
+                                  children: [
+                                    _buildDeliveryBanner(),
+                                    _buildHeroSection(),
+                                    _buildExploreSection(cartProductIds),
+                                    _buildWhyChooseUs(),
+                                    _buildTestimonialsSection(),
+                                    _buildFaqSection(),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox.shrink(),
+                              const SizedBox.shrink(),
+                            ],
                           ),
                         ),
                       ],
                     ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
+        cartCount: cartCount,
+        onTap: (index) {
+          if (index == 1) {
+            _openCart();
+          } else if (index == 2) {
+            _showAuthDialog();
+          } else {
+            setState(() {
+              _currentIndex = index;
+            });
+          }
+        },
+      ),
     );
   }
 
-  Widget _buildAppBar() {
-    print('🛒 Building AppBar with cartCount: $_cartCount');
+  Widget _buildAppBar(int cartCount) {
     return HeaderSection(
-      cartCount: _cartCount,
+      cartCount: cartCount,
       onCartTap: _openCart,
-      onSearchSubmit: () {
-        print('Search submitted');
-      },
+      onSearchSubmit: () {},
       onSearchQueryChanged: _onSearchQueryChanged,
     );
   }
@@ -421,7 +409,7 @@ authProvider.addListener(() {
     );
   }
 
-  Widget _buildExploreSection() {
+  Widget _buildExploreSection(Set<String> cartProductIds) {
     Map<String, List<dynamic>> productsByCategory = {};
     
     for (var product in _filteredProducts) {
@@ -509,17 +497,15 @@ authProvider.addListener(() {
                     ),
                     itemCount: products.length,
                     itemBuilder: (context, index) {
-                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                      String? guestIdToUse = authProvider.isLoggedIn ? null : _guestId;
-                      String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
-                      
                       return ProductCard(
                         product: products[index],
                         onAddToCart: () => _addToCart(products[index]),
-                        guestId: guestIdToUse,
-                        token: tokenToUse,
-                        onCartUpdate: _refreshCartCount,
-                        cartProductIds: _cartProductIds, // ✅ ADDED - Pass cart product IDs
+                        guestId: _guestId,
+                        token: _authProvider.isLoggedIn ? _authProvider.token : null,
+                        onCartUpdate: () {
+                          _cartProvider.refreshCartCount();
+                        },
+                        cartProductIds: cartProductIds,
                       );
                     },
                   ),

@@ -3,8 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
+import '../providers/cart_provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../widgets/bottom_nav_bar.dart';
+import '../widgets/cart_drawer.dart';
+import 'auth/signup_screen.dart';
+import 'profile/profile_screen.dart';
 
 class OrderSuccessScreen extends StatefulWidget {
   final String orderId;
@@ -23,11 +28,35 @@ class OrderSuccessScreen extends StatefulWidget {
 class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
   Map<String, dynamic>? _receipt;
   bool _isLoading = true;
+  int _cartCount = 0;
+  int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _loadReceipt();
+    _loadCartCount();
+  }
+
+  Future<void> _loadCartCount() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final isLoggedIn = authProvider.isLoggedIn;
+      final token = authProvider.token;
+      
+      final response = await ApiService.getCart(
+        guestId: isLoggedIn ? null : null,
+        token: token,
+      );
+      
+      if (response['success'] == true && mounted) {
+        setState(() {
+          _cartCount = response['data']?['totalItems'] ?? 0;
+        });
+      }
+    } catch (e) {
+      print('Error loading cart count: $e');
+    }
   }
 
   Future<void> _loadReceipt() async {
@@ -57,8 +86,49 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
     }
   }
 
+  void _openCart() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    String? guestIdToUse = authProvider.isLoggedIn ? null : null;
+    String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CartScreen(
+          guestId: guestIdToUse,
+          token: tokenToUse,
+          onCartUpdate: () {
+            _loadCartCount();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showAuthDialog() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    if (authProvider.isLoggedIn) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ProfileScreen()),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => SignupScreen()),
+      );
+    }
+  }
+
+  void _navigateToHome() {
+    Navigator.popUntil(context, (route) => route.isFirst);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final cartCount = Provider.of<CartProvider>(context).cartCount;
+    
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -161,11 +231,10 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
                         const Divider(),
                         const SizedBox(height: 8),
                         _buildSummaryRow('Subtotal', (widget.orderData['totalAmount'] as num).toDouble()),
-_buildSummaryRow('Tax (5%)', (widget.orderData['taxAmount'] as num).toDouble()),
-_buildSummaryRow('Shipping', (widget.orderData['shippingFee'] ?? 0).toDouble()),
+                        _buildSummaryRow('Tax (5%)', (widget.orderData['taxAmount'] as num).toDouble()),
+                        _buildSummaryRow('Shipping', (widget.orderData['shippingFee'] ?? 0).toDouble()),
                         const Divider(),
-
-_buildSummaryRow('Total', (widget.orderData['finalAmount'] as num).toDouble(), isTotal: true),
+                        _buildSummaryRow('Total', (widget.orderData['finalAmount'] as num).toDouble(), isTotal: true),
                       ],
                     ),
                   ),
@@ -258,6 +327,22 @@ _buildSummaryRow('Total', (widget.orderData['finalAmount'] as num).toDouble(), i
                 ],
               ),
             ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
+        cartCount: cartCount,
+        onTap: (index) {
+          if (index == 0) {
+            _navigateToHome();
+          } else if (index == 1) {
+            _openCart();
+          } else if (index == 2) {
+            _showAuthDialog();
+          }
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+      ),
     );
   }
 

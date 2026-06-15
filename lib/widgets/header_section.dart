@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'auth_widget.dart';
+import '../screens/product_detail_screen.dart';
 
 class HeaderSection extends StatefulWidget {
   final int cartCount;
@@ -63,196 +64,159 @@ class _HeaderSectionState extends State<HeaderSection> {
           );
         },
       ),
-    );
+    ).then((_) {
+      widget.onSearchSubmit();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    print('🛒 HeaderSection build - cartCount: ${widget.cartCount}');
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isDesktop = screenWidth >= 1024;
-
-    return Container(
-      color: Colors.white,
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // ========== MAIN HEADER ==========
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Logo Left
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFD53E0F), Color(0xFF5E0006)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ========== TOP HEADER (ONLY LOGO + SEARCH BAR) ==========
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Logo
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFD53E0F), Color(0xFF5E0006)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        child: const Center(
-                          child: Text('🐟', style: TextStyle(fontSize: 16)),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Center(
+                        child: Text('🐟', style: TextStyle(fontSize: 16)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'SeaFood',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF5E0006),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(width: 12),
+                
+                // Search Bar (Expanded to take remaining space)
+                Expanded(
+                  child: GestureDetector(
+                    onTap: _openSearchModal,
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: const Color(0xFFE0E0E0),
+                          width: 1,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'SeaFood',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5E0006),
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  // Right Icons: Search, Profile, Cart
-                  Row(
-                    children: [
-                      // Search Icon
-                      GestureDetector(
-                        onTap: _openSearchModal,
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF5E0006).withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
+                      child: const Row(
+                        children: [
+                          SizedBox(width: 16),
+                          Icon(
                             Icons.search,
                             color: Color(0xFF5E0006),
                             size: 20,
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      
-                      // Profile Icon - Using AuthIconWidget
-                      const AuthIconWidget(),
-                      
-                      const SizedBox(width: 8),
-                      
-                      // Cart Icon with Badge
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          GestureDetector(
-                            onTap: widget.onCartTap,
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF5E0006).withOpacity(0.05),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                Icons.shopping_bag_outlined,
-                                color: const Color(0xFF5E0006),
-                                size: 20,
-                              ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Search here...',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 14,
                             ),
                           ),
-                          if (widget.cartCount > 0)
-                            Positioned(
-                              right: 6,
-                              top: 6,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFD53E0F),
-                                  shape: BoxShape.circle,
-                                ),
-                                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                                child: Text(
-                                  widget.cartCount > 9 ? '9+' : '${widget.cartCount}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+          
+          // ========== CATEGORIES TABS WITH IMAGES ==========
+          if (_categories.isNotEmpty)
+            Container(
+              color: Colors.white,
+              height: 50,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                itemCount: _categories.length + 2,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return _buildCategoryTabWithImage('ALL', null, index == 0, categoryId: '');
+                  } else if (index == _categories.length + 1) {
+                    return const SizedBox(width: 12);
+                  } else {
+                    final category = _categories[index - 1];
+                    final imageUrl = category['image'] != null && category['image'].toString().isNotEmpty
+                        ? _getCategoryImageUrl(category['image'])
+                        : null;
+                    return _buildCategoryTabWithImage(
+                      category['name'],
+                      imageUrl,
+                      false,
+                      categoryId: category['_id'].toString(),
+                    );
+                  }
+                },
               ),
             ),
-            
-            // ========== CATEGORIES TABS ==========
-            if (_categories.isNotEmpty)
-              Container(
-                color: Colors.white,
-                height: 50,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: _categories.length + 2,
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      return _buildCategoryTab('ALL', index == 0, categoryId: '');
-                    } else if (index == _categories.length + 1) {
-                      return const SizedBox(width: 12);
-                    } else {
-                      final category = _categories[index - 1];
-                      // ✅ FIX: Pass the categoryId
-                      return _buildCategoryTab(
-                        category['name'].toUpperCase(),
-                        false,
-                        categoryId: category['_id'].toString(),
-                      );
-                    }
-                  },
-                ),
-              ),
-            
-            // ========== BOTTOM NAVIGATION BAR (Desktop) ==========
-            if (isDesktop)
-              Container(
-                color: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildBottomNavItem(Icons.home, 'Home', 0),
-                    _buildBottomNavItem(Icons.search, 'Explore', 0),
-                    _buildBottomNavItem(Icons.shopping_bag, 'Cart', widget.cartCount),
-                    _buildBottomNavItem(Icons.person, 'Profile', 0),
-                  ],
-                ),
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
   
-  // ✅ UPDATED: _buildCategoryTab with categoryId parameter
-  Widget _buildCategoryTab(String title, bool isActive, {required String categoryId}) {
+String _getCategoryImageUrl(dynamic imageData) {
+  String imagePath = '';
+  if (imageData is String) {
+    imagePath = imageData;
+  } else if (imageData is Map && imageData.containsKey('image')) {
+    imagePath = imageData['image'];
+  }
+  if (imagePath.isEmpty) return '';
+  if (imagePath.startsWith('http')) return imagePath;
+  
+  // Remove leading slash only
+  if (imagePath.startsWith('/')) imagePath = imagePath.substring(1);
+  
+  // DO NOT remove 'uploads/' - keep it as is
+  // Because ApiService.imageBaseUrl returns base URL without /uploads
+  
+  return '${ApiService.imageBaseUrl}/$imagePath';
+}
+  
+  Widget _buildCategoryTabWithImage(String title, String? imageUrl, bool isActive, {required String categoryId}) {
     return GestureDetector(
       onTap: () {
         if (categoryId.isNotEmpty) {
@@ -265,17 +229,42 @@ class _HeaderSectionState extends State<HeaderSection> {
             },
           );
         } else if (title == 'ALL') {
-          // Navigate to all products page
           Navigator.pushNamed(context, '/products');
         }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
         child: Chip(
+          avatar: imageUrl != null && imageUrl.isNotEmpty
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    imageUrl,
+                    width: 24,
+                    height: 24,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD53E0F).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.category,
+                          size: 14,
+                          color: Color(0xFFD53E0F),
+                        ),
+                      );
+                    },
+                  ),
+                )
+              : null,
           label: Text(
             title,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               color: isActive ? Colors.white : const Color(0xFF5E0006),
             ),
@@ -293,68 +282,25 @@ class _HeaderSectionState extends State<HeaderSection> {
       ),
     );
   }
-  
-  Widget _buildBottomNavItem(IconData icon, String label, int badgeCount) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Icon(
-              icon,
-              color: const Color(0xFF5E0006).withOpacity(0.7),
-              size: 22,
-            ),
-            if (badgeCount > 0)
-              Positioned(
-                right: -8,
-                top: -8,
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFD53E0F),
-                    shape: BoxShape.circle,
-                  ),
-                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                  child: Text(
-                    badgeCount > 9 ? '9+' : '$badgeCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: const Color(0xFF5E0006).withOpacity(0.6),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
 }
+
+
 
 // ========== FULL SCREEN SEARCH MODAL ==========
 class FullScreenSearchModal extends StatefulWidget {
   final TextEditingController searchController;
   final VoidCallback onSearchSubmit;
   final Function(String)? onSearchQueryChanged;
+  final String? guestId;
+  final String? token;
 
   const FullScreenSearchModal({
     super.key,
     required this.searchController,
     required this.onSearchSubmit,
     this.onSearchQueryChanged,
+    this.guestId,
+    this.token,
   });
 
   @override
@@ -424,6 +370,19 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
     });
   }
 
+  void _navigateToProduct(dynamic product) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProductDetailScreen(
+          productId: product['_id'],
+          guestId: widget.guestId,
+          token: widget.token,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     widget.searchController.removeListener(_onSearchChanged);
@@ -442,12 +401,10 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
         child: SafeArea(
           child: Column(
             children: [
-              // Top bar with search input and buttons
               Container(
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    // Search input field
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
@@ -497,8 +454,6 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    
-                    // Search button
                     GestureDetector(
                       onTap: _handleSearchSubmit,
                       child: Container(
@@ -519,8 +474,6 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    
-                    // Close button
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: Container(
@@ -543,8 +496,6 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
                   ],
                 ),
               ),
-              
-              // Search results area
               Expanded(
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -604,38 +555,8 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
 
     return ListView.builder(
       padding: const EdgeInsets.all(8),
-      itemCount: _searchResults.length + 1,
+      itemCount: _searchResults.length,
       itemBuilder: (context, index) {
-        if (index == _searchResults.length) {
-          return Padding(
-            padding: const EdgeInsets.all(12),
-            child: GestureDetector(
-              onTap: _handleSearchSubmit,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFFD53E0F).withOpacity(0.3),
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    'View all results for "${widget.searchController.text}"',
-                    style: const TextStyle(
-                      color: Color(0xFFEED9B9),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }
-
         final product = _searchResults[index];
         return _buildSearchResultItem(product);
       },
@@ -652,7 +573,6 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
       imageUrl = '${ApiService.imageBaseUrl}/$imagePath';
     }
 
-    // Get category name safely
     String categoryName = '';
     if (product['category'] is Map) {
       categoryName = product['category']['name'] ?? 'Category';
@@ -663,10 +583,7 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
     }
 
     return GestureDetector(
-      onTap: () {
-        widget.onSearchSubmit();
-        Navigator.pop(context);
-      },
+      onTap: () => _navigateToProduct(product),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         padding: const EdgeInsets.all(12),

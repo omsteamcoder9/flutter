@@ -3,8 +3,15 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../widgets/product_card.dart';
+import '../widgets/header_section.dart';
+import '../widgets/bottom_nav_bar.dart';
+import '../widgets/cart_drawer.dart';
+import '../providers/auth_provider.dart';
+import '../providers/cart_provider.dart';
 import 'dart:convert';
 import '../screens/auth/signup_screen.dart';
+import 'package:provider/provider.dart';
+import '../screens/profile/profile_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final String? productId;
@@ -40,18 +47,58 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   String? _guestId;
   String? _authToken;
+  int _cartCount = 0;
+  int _currentIndex = 0;
+
+  late CartProvider _cartProvider;
+  late AuthProvider _authProvider;
 
   @override
   void initState() {
     super.initState();
     _loadGuestIdAndToken();
     _loadProduct();
+    _refreshCartCount();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _cartProvider = Provider.of<CartProvider>(context, listen: false);
+    _authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    if (_guestId != null && _guestId!.isNotEmpty) {
+      _cartProvider.initialize(
+        guestId: _guestId!,
+        token: _authProvider.isLoggedIn ? _authProvider.token : null,
+        isLoggedIn: _authProvider.isLoggedIn,
+      );
+      _cartProvider.refreshCartCount();
+    }
+  }
+
+  Future<void> _refreshCartCount() async {
+    try {
+      String? guestIdToUse = _authProvider.isLoggedIn ? null : _guestId;
+      String? tokenToUse = _authProvider.isLoggedIn ? _authProvider.token : null;
+      
+      final response = await ApiService.getCart(guestId: guestIdToUse, token: tokenToUse);
+      
+      if (response['success'] == true && mounted) {
+        final newCount = response['data']?['totalItems'] ?? 0;
+        setState(() {
+          _cartCount = newCount;
+        });
+      }
+    } catch (e) {
+      print('Error refreshing cart: $e');
+    }
   }
 
   Future<void> _loadGuestIdAndToken() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _guestId = widget.guestId ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
+      _guestId = widget.guestId ?? prefs.getString('guest_id') ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
       _authToken = widget.token ?? prefs.getString('auth_token');
     });
   }
@@ -216,6 +263,46 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  void _openCart() {
+    String? guestIdToUse = _authProvider.isLoggedIn ? null : _guestId;
+    String? tokenToUse = _authProvider.isLoggedIn ? _authProvider.token : null;
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CartScreen(
+          guestId: guestIdToUse,
+          token: tokenToUse,
+          onCartUpdate: () {
+            _refreshCartCount();
+            _cartProvider.refreshCartCount();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showAuthDialog() {
+    if (_authProvider.isLoggedIn) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ProfileScreen()),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const SignupScreen()),
+      );
+    }
+  }
+
+  void _navigateToHome() {
+    Navigator.popUntil(context, (route) => route.isFirst);
+  }
+
+  void _onSearchSubmit() {}
+  void _onSearchQueryChanged(String query) {}
+
   Future<void> _addToCart() async {
     if (_isOutOfStock()) return;
 
@@ -238,6 +325,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         setState(() {
           _showAddedMessage = true;
         });
+
+        await _refreshCartCount();
+        if (_cartProvider != null) {
+          await _cartProvider.refreshCartCount();
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -277,86 +369,96 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
-Future<void> _buyNow() async {
-  if (_isOutOfStock()) return;
+  Future<void> _buyNow() async {
+    if (_isOutOfStock()) return;
 
-  setState(() {
-    _isAddingToCart = true;
-  });
+    setState(() {
+      _isAddingToCart = true;
+    });
 
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    
-    final buyNowOrder = {
-      'productId': _product!['_id'],
-      'productName': _product!['name'],
-      'quantity': _quantity,
-      'variantId': _selectedVariant?['_id'] ?? '',
-      'variantName': _selectedVariant?['variantName'] ?? '',
-      'price': _getCurrentPrice(),
-      'imageUrl': _getCurrentImages().isNotEmpty ? _getImageUrl(_getCurrentImages()[0]) : '',
-    };
-    
-    await prefs.setString('buy_now_order', jsonEncode(buyNowOrder));
-    await prefs.setBool('pending_checkout', true);  // ✅ ADD THIS LINE
-
-    
-    // ✅ Check if user is logged in
-    final token = prefs.getString('auth_token');
-    
-    if (mounted) {
- if (token == null || token.isEmpty) {
-  // Guest user - redirect to signup WITH guestId
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => SignupScreen(guestId: _guestId),  // ✅ Pass guestId
-    ),
-  );
-} else {
-  // Logged in user - go directly to checkout
-  Navigator.pushNamed(context, '/checkout');
-}
-    }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-    );
-  } finally {
-    if (mounted) {
-      setState(() {
-        _isAddingToCart = false;
-      });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      final buyNowOrder = {
+        'productId': _product!['_id'],
+        'productName': _product!['name'],
+        'quantity': _quantity,
+        'variantId': _selectedVariant?['_id'] ?? '',
+        'variantName': _selectedVariant?['variantName'] ?? '',
+        'price': _getCurrentPrice(),
+        'imageUrl': _getCurrentImages().isNotEmpty ? _getImageUrl(_getCurrentImages()[0]) : '',
+      };
+      
+      await prefs.setString('buy_now_order', jsonEncode(buyNowOrder));
+      await prefs.setBool('pending_checkout', true);
+      
+      final token = prefs.getString('auth_token');
+      
+      if (mounted) {
+        if (token == null || token.isEmpty) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SignupScreen(guestId: _guestId),
+            ),
+          );
+        } else {
+          Navigator.pushNamed(context, '/checkout');
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAddingToCart = false;
+        });
+      }
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {
+    final cartCount = Provider.of<CartProvider>(context).cartCount;
+    final cartProductIds = Provider.of<CartProvider>(context).cartProductIds;
+    
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF5E0006)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          _product?['name'] ?? 'Product Details',
-          style: const TextStyle(
-            color: Color(0xFF5E0006),
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+      body: Column(
+        children: [
+          HeaderSection(
+            cartCount: cartCount,
+            onCartTap: _openCart,
+            onSearchSubmit: _onSearchSubmit,
+            onSearchQueryChanged: _onSearchQueryChanged,
           ),
-          overflow: TextOverflow.ellipsis,
-        ),
+          Expanded(
+            child: _buildBody(cartProductIds),
+          ),
+        ],
       ),
-      body: _buildBody(),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
+        cartCount: cartCount,
+        onTap: (index) {
+          if (index == 0) {
+            _navigateToHome();
+          } else if (index == 1) {
+            _openCart();
+          } else if (index == 2) {
+            _showAuthDialog();
+          }
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+      ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(Set<String> cartProductIds) {
     if (_isLoading) {
       return const Center(
         child: Column(
@@ -512,7 +614,7 @@ Future<void> _buyNow() async {
           ),
           
           if (_relatedProducts.isNotEmpty)
-            _buildRelatedProductsSection(),
+            _buildRelatedProductsSection(cartProductIds),
           
           const SizedBox(height: 16),
         ],
@@ -938,7 +1040,7 @@ Future<void> _buyNow() async {
     );
   }
 
-  Widget _buildRelatedProductsSection() {
+  Widget _buildRelatedProductsSection(Set<String> cartProductIds) {
     return Column(
       children: [
         const Padding(
@@ -966,6 +1068,7 @@ Future<void> _buyNow() async {
                 child: ProductCard(
                   product: product,
                   onAddToCart: () {},
+                  cartProductIds: cartProductIds,
                 ),
               );
             },

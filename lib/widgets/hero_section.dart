@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
+import '../screens/product_detail_screen.dart';
 
 class HeroSection extends StatefulWidget {
   final List<dynamic> products;
@@ -184,7 +185,7 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
                 children: [
                   // Product Name
                   TweenAnimationBuilder(
-                    key: ValueKey('name_$_currentSlide'),
+                    key: ValueKey('name_${_currentSlide}_${_animationTrigger}'),
                     tween: Tween<double>(begin: 0, end: 1),
                     duration: const Duration(milliseconds: 400),
                     builder: (context, value, child) {
@@ -211,7 +212,7 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
                   
                   // Price
                   TweenAnimationBuilder(
-                    key: ValueKey('price_$_currentSlide'),
+                    key: ValueKey('price_${_currentSlide}_${_animationTrigger}'),
                     tween: Tween<double>(begin: 0, end: 1),
                     duration: const Duration(milliseconds: 400),
                     builder: (context, value, child) {
@@ -238,7 +239,7 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
                   
                   // Description
                   TweenAnimationBuilder(
-                    key: ValueKey('desc_$_currentSlide'),
+                    key: ValueKey('desc_${_currentSlide}_${_animationTrigger}'),
                     tween: Tween<double>(begin: 0, end: 1),
                     duration: const Duration(milliseconds: 400),
                     builder: (context, value, child) {
@@ -265,7 +266,7 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
                   
                   // View More Button
                   TweenAnimationBuilder(
-                    key: ValueKey('button_$_currentSlide'),
+                    key: ValueKey('button_${_currentSlide}_${_animationTrigger}'),
                     tween: Tween<double>(begin: 0, end: 1),
                     duration: const Duration(milliseconds: 400),
                     builder: (context, value, child) {
@@ -278,7 +279,16 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
                       );
                     },
                     child: GestureDetector(
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProductDetailScreen(
+                              productId: currentProduct['_id'],
+                            ),
+                          ),
+                        );
+                      },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         decoration: BoxDecoration(

@@ -1,9 +1,16 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import '../../services/api_service.dart';
 import '../../models/order.dart';
+import '../../providers/cart_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../widgets/bottom_nav_bar.dart';
+import '../../widgets/cart_drawer.dart';
+import '../auth/signup_screen.dart';
+import '../profile/profile_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final Order order;
@@ -16,16 +23,115 @@ class OrderDetailScreen extends StatefulWidget {
 
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
   bool _isDownloadingPDF = false;
+  int _currentIndex = 2;
+  int _cartCount = 0;
+  Order? _freshOrder;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCartCount();
+    _refreshOrderDetails();
+    
+    for (var item in widget.order.products) {
+      print('Product: ${item.name}, Image: ${item.image}');
+    }
+  }
+
+Future<void> _refreshOrderDetails() async {
+  try {
+    final orderData = await ApiService.getOrderById(widget.order.id);
+    if (orderData != null && mounted) {
+      setState(() {
+        _freshOrder = orderData;
+      });
+    }
+  } catch (e) {
+    print('Error refreshing order: $e');
+  }
+}
+
+  Order get _currentOrder => _freshOrder ?? widget.order;
+
+  Future<void> _loadCartCount() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final isLoggedIn = authProvider.isLoggedIn;
+      final token = authProvider.token;
+      
+      final response = await ApiService.getCart(
+        guestId: isLoggedIn ? null : null,
+        token: token,
+      );
+      
+      if (response['success'] == true && mounted) {
+        setState(() {
+          _cartCount = response['data']?['totalItems'] ?? 0;
+        });
+      }
+    } catch (e) {
+      print('Error loading cart count: $e');
+    }
+  }
+
+  void _openCart() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    String? guestIdToUse = authProvider.isLoggedIn ? null : null;
+    String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CartScreen(
+          guestId: guestIdToUse,
+          token: tokenToUse,
+          onCartUpdate: () {
+            _loadCartCount();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showAuthDialog() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    if (authProvider.isLoggedIn) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ProfileScreen()),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => SignupScreen()),
+      );
+    }
+  }
+
+  void _navigateToHome() {
+    Navigator.popUntil(context, (route) => route.isFirst);
+  }
+
+  String _getImageUrl(String? imagePath) {
+    if (imagePath == null || imagePath.isEmpty) return '';
+    if (imagePath.startsWith('http')) return imagePath;
+    String cleanPath = imagePath;
+    if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
+    return '${ApiService.imageBaseUrl}/$cleanPath';
+  }
 
   @override
   Widget build(BuildContext context) {
+    final cartCount = Provider.of<CartProvider>(context).cartCount;
+    
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         title: Text(
-          'Order #${widget.order.orderId}',
+          'Order #${_currentOrder.orderId}',
           style: const TextStyle(
             color: Color(0xFF5E0006),
             fontWeight: FontWeight.bold,
@@ -44,28 +150,34 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Order Status Card
             _buildStatusCard(),
             const SizedBox(height: 16),
-            
-            // Order Info Card
             _buildOrderInfoCard(),
             const SizedBox(height: 16),
-            
-            // Shipping Address Card
             _buildShippingAddressCard(),
             const SizedBox(height: 16),
-            
-            // Items Card
             _buildItemsCard(),
             const SizedBox(height: 16),
-            
-            // Payment Summary Card
             _buildPaymentSummaryCard(),
-            
             const SizedBox(height: 24),
           ],
         ),
+      ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
+        cartCount: cartCount,
+        onTap: (index) {
+          if (index == 0) {
+            _navigateToHome();
+          } else if (index == 1) {
+            _openCart();
+          } else if (index == 2) {
+            _showAuthDialog();
+          }
+          setState(() {
+            _currentIndex = index;
+          });
+        },
       ),
     );
   }
@@ -101,7 +213,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Order ${widget.order.getStatusText()}',
+                  'Order ${_currentOrder.getStatusText()}',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -116,29 +228,29 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     color: Colors.white.withOpacity(0.8),
                   ),
                 ),
-                if (widget.order.deliveredAt != null) ...[
+                if (_currentOrder.deliveredAt != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    'Delivered on: ${_formatDate(widget.order.deliveredAt!)}',
+                    'Delivered on: ${_formatDate(_currentOrder.deliveredAt!)}',
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.white.withOpacity(0.7),
                     ),
                   ),
                 ],
-                if (widget.order.cancelledAt != null) ...[
+                if (_currentOrder.cancelledAt != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    'Cancelled on: ${_formatDate(widget.order.cancelledAt!)}',
+                    'Cancelled on: ${_formatDate(_currentOrder.cancelledAt!)}',
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.white.withOpacity(0.7),
                     ),
                   ),
-                  if (widget.order.cancellationReason != null) ...[
+                  if (_currentOrder.cancellationReason != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      'Reason: ${widget.order.cancellationReason}',
+                      'Reason: ${_currentOrder.cancellationReason}',
                       style: TextStyle(
                         fontSize: 11,
                         color: Colors.white.withOpacity(0.7),
@@ -181,12 +293,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ],
             ),
             const Divider(height: 24),
-            _buildInfoRow('Order ID', widget.order.orderId),
-            _buildInfoRow('Order Date', _formatDateTime(widget.order.createdAt)),
-            _buildInfoRow('Payment Method', widget.order.paymentMethod.toUpperCase()),
-            _buildInfoRow('Payment Status', widget.order.paymentStatus),
-            if (widget.order.wardName != null)
-              _buildInfoRow('Ward', widget.order.wardName!),
+            _buildInfoRow('Order ID', _currentOrder.orderId),
+            _buildInfoRow('Order Date', _formatDateTime(_currentOrder.createdAt)),
+            _buildInfoRow('Payment Method', _currentOrder.paymentMethod.toUpperCase()),
+            _buildInfoRow('Payment Status', _currentOrder.paymentStatus),
+            if (_currentOrder.wardName != null)
+              _buildInfoRow('Ward', _currentOrder.wardName!),
           ],
         ),
       ),
@@ -221,21 +333,21 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ),
             const Divider(height: 24),
             Text(
-              widget.order.shippingAddress.street,
+              _currentOrder.shippingAddress.street,
               style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 4),
             Text(
-              '${widget.order.shippingAddress.city}, ${widget.order.shippingAddress.state}',
+              '${_currentOrder.shippingAddress.city}, ${_currentOrder.shippingAddress.state}',
               style: const TextStyle(fontSize: 14),
             ),
             Text(
-              '${widget.order.shippingAddress.postalCode}',
+              '${_currentOrder.shippingAddress.postalCode}',
               style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 12),
-            _buildInfoRow('Phone', widget.order.shippingAddress.phone),
-            _buildInfoRow('Email', widget.order.shippingAddress.email),
+            _buildInfoRow('Phone', _currentOrder.shippingAddress.phone),
+            _buildInfoRow('Email', _currentOrder.shippingAddress.email),
           ],
         ),
       ),
@@ -259,7 +371,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 Icon(Icons.shopping_bag_outlined, size: 18, color: Colors.grey.shade600),
                 const SizedBox(width: 8),
                 Text(
-                  'Order Items (${widget.order.products.length})',
+                  'Order Items (${_currentOrder.products.length})',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -272,10 +384,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: widget.order.products.length,
+              itemCount: _currentOrder.products.length,
               separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                final item = widget.order.products[index];
+                final item = _currentOrder.products[index];
                 return _buildOrderItem(item);
               },
             ),
@@ -286,6 +398,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Widget _buildOrderItem(OrderProduct item) {
+    final imageUrl = _getImageUrl(item.image);
+    
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -296,11 +410,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             color: Colors.grey.shade100,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: item.image != null
+          child: imageUrl.isNotEmpty
               ? ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: Image.network(
-                    '${ApiService.imageBaseUrl}${item.image}',
+                    imageUrl,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
                       return const Icon(Icons.image_not_supported, size: 24, color: Colors.grey);
@@ -394,15 +508,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ],
             ),
             const Divider(height: 24),
-            _buildSummaryRow('Subtotal', '₹${widget.order.totalAmount.toStringAsFixed(2)}'),
-            _buildSummaryRow('Shipping Fee', '₹${widget.order.shippingFee.toStringAsFixed(2)}'),
-            _buildSummaryRow('Tax (5%)', '₹${widget.order.taxAmount.toStringAsFixed(2)}'),
-            if (widget.order.discountAmount > 0)
-              _buildSummaryRow('Discount', '-₹${widget.order.discountAmount.toStringAsFixed(2)}'),
+            _buildSummaryRow('Subtotal', '₹${_currentOrder.totalAmount.toStringAsFixed(2)}'),
+            _buildSummaryRow('Shipping Fee', '₹${_currentOrder.shippingFee.toStringAsFixed(2)}'),
+            _buildSummaryRow('Tax (5%)', '₹${_currentOrder.taxAmount.toStringAsFixed(2)}'),
+            if (_currentOrder.discountAmount > 0)
+              _buildSummaryRow('Discount', '-₹${_currentOrder.discountAmount.toStringAsFixed(2)}'),
             const Divider(height: 16),
             _buildSummaryRow(
               'Total',
-              '₹${widget.order.finalAmount.toStringAsFixed(2)}',
+              '₹${_currentOrder.finalAmount.toStringAsFixed(2)}',
               isTotal: true,
             ),
           ],
@@ -463,7 +577,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   IconData _getStatusIcon() {
-    switch (widget.order.orderStatus) {
+    switch (_currentOrder.orderStatus) {
       case 'pending': return Icons.pending_outlined;
       case 'confirmed': return Icons.check_circle_outline;
       case 'processing': return Icons.hourglass_empty;
@@ -475,7 +589,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   String _getStatusMessage() {
-    switch (widget.order.orderStatus) {
+    switch (_currentOrder.orderStatus) {
       case 'pending': return 'Your order is being processed';
       case 'confirmed': return 'Your order has been confirmed';
       case 'processing': return 'Your order is being prepared';
@@ -492,12 +606,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     });
 
     try {
-      // ✅ Use STATIC method directly
-      final pdfBytes = await ApiService.downloadOrderReceiptPDF(widget.order.id);
+      final pdfBytes = await ApiService.downloadOrderReceiptPDF(_currentOrder.id);
       
       if (pdfBytes != null && mounted) {
         final directory = await getTemporaryDirectory();
-        final file = File('${directory.path}/receipt_${widget.order.orderId}.pdf');
+        final file = File('${directory.path}/receipt_${_currentOrder.orderId}.pdf');
         await file.writeAsBytes(pdfBytes);
         
         await OpenFile.open(file.path);

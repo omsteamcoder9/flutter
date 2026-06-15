@@ -3,10 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
+import '../providers/cart_provider.dart';
 import 'package:http/http.dart' as http;
 import 'order_success_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/bottom_nav_bar.dart';
+import '../widgets/cart_drawer.dart';
+import 'auth/signup_screen.dart';
+import 'profile/profile_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final String? guestId;
@@ -45,12 +50,37 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // Buy Now state
   Map<String, dynamic>? _buyNowItem;
   bool _isBuyNowMode = false;
+  
+  int _currentIndex = 1; // Cart tab selected
+  int _cartCount = 0;
 
   @override
   void initState() {
     super.initState();
     _checkBuyNowOrder();
     _loadCartData();
+    _loadCartCount();
+  }
+
+  Future<void> _loadCartCount() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final isLoggedIn = authProvider.isLoggedIn;
+      final token = authProvider.token;
+      
+      final response = await ApiService.getCart(
+        guestId: isLoggedIn ? null : widget.guestId,
+        token: token,
+      );
+      
+      if (response['success'] == true && mounted) {
+        setState(() {
+          _cartCount = response['data']?['totalItems'] ?? 0;
+        });
+      }
+    } catch (e) {
+      print('Error loading cart count: $e');
+    }
   }
 
   Future<void> _checkBuyNowOrder() async {
@@ -119,6 +149,45 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return _buyNowItem!['quantity'] ?? 1;
     }
     return _cart['totalItems'] ?? 0;
+  }
+
+  void _openCart() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    String? guestIdToUse = authProvider.isLoggedIn ? null : widget.guestId;
+    String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CartScreen(
+          guestId: guestIdToUse,
+          token: tokenToUse,
+          onCartUpdate: () {
+            _loadCartCount();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showAuthDialog() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    if (authProvider.isLoggedIn) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ProfileScreen()),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => SignupScreen()),
+      );
+    }
+  }
+
+  void _navigateToHome() {
+    Navigator.popUntil(context, (route) => route.isFirst);
   }
 
   Future<void> _placeOrder() async {
@@ -433,6 +502,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final tax = subtotal * 0.05;
     final total = subtotal + tax;
     final itemCount = _getItemCount();
+    final cartItems = _cart['items'] as List? ?? [];
+    final cartCount = Provider.of<CartProvider>(context).cartCount;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -497,6 +568,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    
                     if (_isBuyNowMode && _buyNowItem != null)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -513,11 +585,40 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           ),
                         ],
                       )
+                    else if (cartItems.isNotEmpty)
+                      Column(
+                        children: cartItems.map((item) {
+                          final productName = item['productName'] ?? 
+                              (item['product'] is Map ? item['product']['name'] : 'Product');
+                          final quantity = item['quantity'] ?? 1;
+                          final price = (item['price'] ?? 0).toDouble();
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '$productName x $quantity',
+                                    style: const TextStyle(fontSize: 13),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Text(
+                                  '₹${(price * quantity).toInt()}',
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      )
                     else
                       Text(
                         '${itemCount} item${itemCount != 1 ? 's' : ''}',
                         style: const TextStyle(fontSize: 14),
                       ),
+                    
                     const SizedBox(height: 12),
                     const Divider(),
                     const SizedBox(height: 8),
@@ -696,6 +797,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
+        cartCount: cartCount,
+        onTap: (index) {
+          if (index == 0) {
+            _navigateToHome();
+          } else if (index == 1) {
+            _openCart();
+          } else if (index == 2) {
+            _showAuthDialog();
+          }
+          setState(() {
+            _currentIndex = index;
+          });
+        },
       ),
     );
   }

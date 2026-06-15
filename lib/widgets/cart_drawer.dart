@@ -31,7 +31,14 @@ class _CartScreenState extends State<CartScreen> {
   @override
   void initState() {
     super.initState();
+    _clearBuyNowOrder();  // ✅ Clear buy now order when cart opens
     _loadCart();
+  }
+
+  Future<void> _clearBuyNowOrder() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('buy_now_order');
+    await prefs.remove('pending_checkout');
   }
 
   Future<void> _loadCart() async {
@@ -373,69 +380,72 @@ class _CartScreenState extends State<CartScreen> {
                       
                       const SizedBox(height: 24),
                       
-                 // Proceed to Checkout Button
-SizedBox(
-  width: double.infinity,
-  child: ElevatedButton(
-    onPressed: () async {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final prefs = await SharedPreferences.getInstance();
-      
-      if (authProvider.isLoggedIn) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CheckoutScreen(
-              guestId: null,
-              onOrderPlaced: widget.onCartUpdate,
-            ),
-          ),
-        );
-      } else {
-        // ✅ Save pending checkout flag
-        await prefs.setBool('pending_checkout', true);
-        
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SignupScreen(guestId: widget.guestId),
-          ),
-        );
-        
-        if (authProvider.isLoggedIn) {
-          final hasPendingCheckout = prefs.getBool('pending_checkout') ?? false;
-          if (hasPendingCheckout) {
-            await prefs.remove('pending_checkout');
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => CheckoutScreen(
-                  guestId: null,
-                  onOrderPlaced: widget.onCartUpdate,
-                ),
-              ),
-            );
-          }
-        }
-      }
-    },
-    style: ElevatedButton.styleFrom(
-      backgroundColor: const Color(0xFFD53E0F),
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-    ),
-    child: const Text(
-      'Proceed to Checkout',
-      style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      ),
-    ),
-  ),
-),
+                      // Proceed to Checkout Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            // ✅ Clear buy now order before proceeding to checkout
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.remove('buy_now_order');
+                            await prefs.remove('pending_checkout');
+                            
+                            final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                            
+                            if (authProvider.isLoggedIn) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CheckoutScreen(
+                                    guestId: null,
+                                    onOrderPlaced: widget.onCartUpdate,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              await prefs.setBool('pending_checkout', true);
+                              
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => SignupScreen(guestId: widget.guestId),
+                                ),
+                              );
+                              
+                              if (authProvider.isLoggedIn) {
+                                final hasPendingCheckout = prefs.getBool('pending_checkout') ?? false;
+                                if (hasPendingCheckout) {
+                                  await prefs.remove('pending_checkout');
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => CheckoutScreen(
+                                        guestId: null,
+                                        onOrderPlaced: widget.onCartUpdate,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFD53E0F),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Proceed to Checkout',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
                       
                       const SizedBox(height: 16),
                     ],
