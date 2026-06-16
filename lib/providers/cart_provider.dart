@@ -10,11 +10,20 @@ class CartProvider extends ChangeNotifier {
 
   int get cartCount => _cartCount;
   Set<String> get cartProductIds => _cartProductIds;
+  String get guestId => _guestId;
 
   void initialize({required String guestId, String? token, bool isLoggedIn = false}) {
     _guestId = guestId;
     _token = token;
     _isLoggedIn = isLoggedIn;
+  }
+
+  // ✅ ADD THIS METHOD
+  void resetToGuest(String guestId) {
+    _guestId = guestId;
+    _token = null;
+    _isLoggedIn = false;
+    refreshCartCount();
   }
 
   Future<void> refreshCartCount() async {
@@ -27,7 +36,6 @@ class CartProvider extends ChangeNotifier {
       if (response['success'] == true) {
         _cartCount = response['data']?['totalItems'] ?? 0;
         
-        // Update cart product IDs
         final items = response['data']?['items'] ?? [];
         final Set<String> productIds = {};
         for (var item in items) {
@@ -40,11 +48,13 @@ class CartProvider extends ChangeNotifier {
           }
         }
         _cartProductIds = productIds;
-        
-        notifyListeners();
       }
+      
+      notifyListeners();
+      
     } catch (e) {
       print('Error refreshing cart: $e');
+      notifyListeners();
     }
   }
 

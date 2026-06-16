@@ -32,6 +32,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   String _guestId = '';
   int _currentIndex = 0;
   bool _isInitialized = false;
+  bool _isUpdating = false;
 
   late CartProvider _cartProvider;
   late AuthProvider _authProvider;
@@ -41,6 +42,18 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     super.initState();
     _loadGuestId();
     _loadProducts();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _authProvider.addListener(() {
+        if (!_isUpdating) {
+          _isUpdating = true;
+          _loadGuestId();
+          _cartProvider.refreshCartCount();
+          setState(() {});
+          _isUpdating = false;
+        }
+      });
+    });
   }
 
   @override
@@ -48,6 +61,8 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     super.didChangeDependencies();
     _cartProvider = Provider.of<CartProvider>(context, listen: false);
     _authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    // ✅ DO NOT call _loadGuestId() here - it's already in initState
     
     if (_guestId.isNotEmpty && !_isInitialized) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -105,6 +120,10 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
         token: _authProvider.isLoggedIn ? _authProvider.token : null,
         isLoggedIn: _authProvider.isLoggedIn,
       );
+      
+      if (mounted) {
+        setState(() {});
+      }
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

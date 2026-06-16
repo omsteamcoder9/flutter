@@ -121,7 +121,7 @@ final userJsonString = jsonEncode(_user!.toJson());
       if (guestId != null && guestId.isNotEmpty) {
         print('🔄 Merging guest cart: $guestId');
         await _mergeGuestCart(guestId);
-          notifyListeners();  // ✅ ADD THIS LINE
+        notifyListeners();  // ✅ ADD THIS LINE
 
       }
     } else {
@@ -148,7 +148,6 @@ Future<void> _mergeGuestCart(String guestId) async {
     );
     print('📦 Cart merge response: ${response.body}');
     
-    // ✅ Parse response to see if merge worked
     final data = jsonDecode(response.body);
     if (data['success'] == true) {
       print('✅ Merge successful! Merged cart has ${data['data']?['totalItems']} items');
@@ -156,8 +155,9 @@ Future<void> _mergeGuestCart(String guestId) async {
       print('❌ Merge failed: ${data['message']}');
     }
     
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('guest_id');
+    // ❌ REMOVE THIS LINE - DO NOT DELETE GUEST ID
+    // final prefs = await SharedPreferences.getInstance();
+    // await prefs.remove('guest_id');
     
     notifyListeners();
     
@@ -165,17 +165,27 @@ Future<void> _mergeGuestCart(String guestId) async {
     print('❌ Error merging cart: $e');
   }
 }
-  Future<void> logout() async {
-    print('🔵 logout called');
-    if (_token != null) {
-      await AuthService.logout(_token!);
-    }
-    await TokenStorage.clearAuthData();
-    _token = null;
-    _user = null;
-    notifyListeners();
-    print('✅ User logged out, data cleared');
+Future<void> logout() async {
+  print('🔵 logout called');
+  if (_token != null) {
+    await AuthService.logout(_token!);
   }
+  await TokenStorage.clearAuthData();
+  _token = null;
+  _user = null;
+  
+  // ✅ Get guestId from SharedPreferences
+  final prefs = await SharedPreferences.getInstance();
+  String guestId = prefs.getString('guest_id') ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
+  
+  // ✅ Save guest ID if not exists
+  if (prefs.getString('guest_id') == null) {
+    await prefs.setString('guest_id', guestId);
+  }
+  
+  notifyListeners();
+  print('✅ User logged out, data cleared');
+}
 
   void updateUser(UserModel user) {
     print('🔵 updateUser called');

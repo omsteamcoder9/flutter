@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
+import '../providers/cart_provider.dart';
 import '../screens/checkout_screen.dart';
 import '../screens/auth/signup_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../widgets/bottom_nav_bar.dart';
+import '../screens/profile/profile_screen.dart';
 class CartScreen extends StatefulWidget {
   final VoidCallback onCartUpdate;
   final String? guestId;
@@ -27,11 +29,12 @@ class _CartScreenState extends State<CartScreen> {
   Map<String, dynamic> _cart = {'items': [], 'totalItems': 0, 'totalPrice': 0};
   bool _isLoading = true;
   List<String> _removingItems = [];
+  int _currentIndex = 1;
 
   @override
   void initState() {
     super.initState();
-    _clearBuyNowOrder();  // ✅ Clear buy now order when cart opens
+    _clearBuyNowOrder();
     _loadCart();
   }
 
@@ -112,6 +115,26 @@ class _CartScreenState extends State<CartScreen> {
     return '₹${price.toStringAsFixed(0)}';
   }
 
+  void _showAuthDialog() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    if (authProvider.isLoggedIn) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ProfileScreen()),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const SignupScreen()),
+      );
+    }
+  }
+
+  void _navigateToHome() {
+    Navigator.popUntil(context, (route) => route.isFirst);
+  }
+
   @override
   Widget build(BuildContext context) {
     final items = _cart['items'] ?? [];
@@ -119,6 +142,7 @@ class _CartScreenState extends State<CartScreen> {
     final subtotal = (_cart['totalPrice'] ?? 0).toDouble();
     final tax = subtotal * 0.05;
     final total = subtotal + tax;
+    final cartCount = Provider.of<CartProvider>(context).cartCount;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -451,6 +475,22 @@ class _CartScreenState extends State<CartScreen> {
                     ],
                   ),
                 ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
+        cartCount: cartCount,
+        onTap: (index) {
+          if (index == 0) {
+            _navigateToHome();
+          } else if (index == 1) {
+            // Already on cart screen
+          } else if (index == 2) {
+            _showAuthDialog();
+          }
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+      ),
     );
   }
 }

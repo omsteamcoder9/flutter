@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
 import '../../models/terms.dart';
+import '../../providers/cart_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../widgets/bottom_nav_bar.dart';
+import '../../widgets/cart_drawer.dart';
+import 'profile/profile_screen.dart';
+import 'auth/signup_screen.dart';
 
 class TermsScreen extends StatefulWidget {
   const TermsScreen({super.key});
@@ -13,11 +20,74 @@ class _TermsScreenState extends State<TermsScreen> {
   TermsData? _terms;
   bool _isLoading = true;
   String? _error;
+  int _currentIndex = 2;
+  int _cartCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadTerms();
+    _loadCartCount();
+  }
+
+  Future<void> _loadCartCount() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final isLoggedIn = authProvider.isLoggedIn;
+      final token = authProvider.token;
+      
+      final response = await ApiService.getCart(
+        guestId: isLoggedIn ? null : null,
+        token: token,
+      );
+      
+      if (response['success'] == true && mounted) {
+        setState(() {
+          _cartCount = response['data']?['totalItems'] ?? 0;
+        });
+      }
+    } catch (e) {
+      print('Error loading cart count: $e');
+    }
+  }
+
+  void _openCart() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    String? guestIdToUse = authProvider.isLoggedIn ? null : null;
+    String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CartScreen(
+          guestId: guestIdToUse,
+          token: tokenToUse,
+          onCartUpdate: () {
+            _loadCartCount();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showAuthDialog() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    if (authProvider.isLoggedIn) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ProfileScreen()),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => SignupScreen()),
+      );
+    }
+  }
+
+  void _navigateToHome() {
+    Navigator.popUntil(context, (route) => route.isFirst);
   }
 
   Future<void> _loadTerms() async {
@@ -42,6 +112,8 @@ class _TermsScreenState extends State<TermsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cartCount = Provider.of<CartProvider>(context).cartCount;
+    
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -56,6 +128,22 @@ class _TermsScreenState extends State<TermsScreen> {
         ),
       ),
       body: _buildBody(),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
+        cartCount: cartCount,
+        onTap: (index) {
+          if (index == 0) {
+            _navigateToHome();
+          } else if (index == 1) {
+            _openCart();
+          } else if (index == 2) {
+            _showAuthDialog();
+          }
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+      ),
     );
   }
 

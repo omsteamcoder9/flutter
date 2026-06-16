@@ -97,9 +97,24 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       authProvider.addListener(() {
-        print('🔄 AuthProvider listener triggered - refreshing cart count');
+        print('🔄 AuthProvider listener triggered - isLoggedIn: ${authProvider.isLoggedIn}');
         if (mounted) {
+          // ✅ Update CartProvider based on login/logout state
+          if (authProvider.isLoggedIn) {
+            _cartProvider.initialize(
+              guestId: _guestId,
+              token: authProvider.token,
+              isLoggedIn: true,
+            );
+          } else {
+            _cartProvider.initialize(
+              guestId: _guestId,
+              token: null,
+              isLoggedIn: false,
+            );
+          }
           _cartProvider.refreshCartCount();
+          setState(() {});
         }
       });
     });
@@ -234,6 +249,10 @@ class _HomeScreenState extends State<HomeScreen> {
         token: _authProvider.isLoggedIn ? _authProvider.token : null,
         isLoggedIn: _authProvider.isLoggedIn,
       );
+      
+      if (mounted) {
+        setState(() {});
+      }
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/cart_provider.dart';
 import 'otp_verification_screen.dart';
 import 'login_screen.dart';
-
+import '../../widgets/bottom_nav_bar.dart';
+import '../../widgets/cart_drawer.dart';
+import '../profile/profile_screen.dart';
+import '../../services/api_service.dart';
 class SignupScreen extends StatefulWidget {
   final String? guestId;
 
@@ -18,6 +22,82 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _phoneController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+  int _currentIndex = 2;
+  int _cartCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCartCount();
+  }
+
+  Future<void> _loadCartCount() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final isLoggedIn = authProvider.isLoggedIn;
+      final token = authProvider.token;
+      
+      final response = await ApiService.getCart(
+        guestId: isLoggedIn ? null : widget.guestId,
+        token: token,
+      );
+      
+      if (response['success'] == true && mounted) {
+        setState(() {
+          _cartCount = response['data']?['totalItems'] ?? 0;
+        });
+      }
+    } catch (e) {
+      print('Error loading cart count: $e');
+    }
+  }
+
+ void _openCart() async {
+  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  
+  // ✅ Get guestId from SharedPreferences if widget.guestId is null
+  String? guestId = widget.guestId;
+  if (guestId == null || guestId.isEmpty) {
+    final prefs = await SharedPreferences.getInstance();
+    guestId = prefs.getString('guest_id');
+        print('🆔 Guest ID from SharedPreferences: $guestId');  // ✅ DEBUG
+
+  }
+    print('🆔 Guest ID being used: $guestId');  // ✅ DEBUG
+
+  String? guestIdToUse = authProvider.isLoggedIn ? null : guestId;
+  String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
+  
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => CartScreen(
+        guestId: guestIdToUse,
+        token: tokenToUse,
+        onCartUpdate: () {
+          _loadCartCount();
+        },
+      ),
+    ),
+  );
+}
+
+  void _showAuthDialog() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    if (authProvider.isLoggedIn) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+      );
+    } else {
+      // Already on signup screen
+    }
+  }
+
+  void _navigateToHome() {
+    Navigator.popUntil(context, (route) => route.isFirst);
+  }
 
   @override
   void dispose() {
@@ -96,7 +176,7 @@ class _SignupScreenState extends State<SignupScreen> {
         _errorMessage = result['message'];
       });
     }
-  }  // ✅ THIS CLOSING BRACKET WAS MISSING
+  }
 
   void _goToLogin() {
     Navigator.pushReplacement(
@@ -109,6 +189,8 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cartCount = Provider.of<CartProvider>(context).cartCount;
+    
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -293,6 +375,22 @@ class _SignupScreenState extends State<SignupScreen> {
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
+        cartCount: cartCount,
+        onTap: (index) {
+          if (index == 0) {
+            _navigateToHome();
+          } else if (index == 1) {
+            _openCart();
+          } else if (index == 2) {
+            _showAuthDialog();
+          }
+          setState(() {
+            _currentIndex = index;
+          });
+        },
       ),
     );
   }

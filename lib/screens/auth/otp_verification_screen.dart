@@ -82,41 +82,37 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       _isLoading = false;
     });
 
-  if (result['success'] == true) {
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(widget.isNewUser ? 'Account created!' : 'Login successful!'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 1),
+if (result['success'] == true) {
+  // Show success message
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(widget.isNewUser ? 'Account created!' : 'Login successful!'),
+      backgroundColor: Colors.green,
+      duration: Duration(seconds: 1),
+    ),
+  );
+  
+  // ✅ Get fresh value
+  final prefs = await SharedPreferences.getInstance();
+  final hasPendingCheckout = prefs.getBool('pending_checkout') ?? false;
+  
+  if (hasPendingCheckout) {
+    // ✅ Has items → Go to Checkout
+    await prefs.remove('pending_checkout');
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CheckoutScreen(
+          guestId: null,
+          onOrderPlaced: () {},
+        ),
       ),
     );
-    
-    // ✅ Check if pending checkout exists
-    if (widget.hasPendingCheckout) {
-      // Clear the pending flag
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('pending_checkout');
-      
-      // Navigate to Checkout
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CheckoutScreen(
-              guestId: null,
-              onOrderPlaced: () {},
-            ),
-          ),
-        );
-      }
-    } else {
-      // Normal flow - go to Home
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/');
-      }
-    }
+  } else {
+    // ✅ No items → Go to Home (THIS IS WHAT YOU NEED)
+    Navigator.pushReplacementNamed(context, '/');
   }
+}
 }
 
 
