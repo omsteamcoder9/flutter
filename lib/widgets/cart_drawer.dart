@@ -198,7 +198,7 @@ class _CartScreenState extends State<CartScreen> {
                       ElevatedButton(
                         onPressed: () => Navigator.pop(context),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF9B0F06),
+                          backgroundColor: const Color(0xFF5E0006),
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
@@ -288,7 +288,7 @@ class _CartScreenState extends State<CartScreen> {
                                           variantName,
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: Color(0xFFD53E0F),
+                                            color: Color(0xFF5E0006),
                                           ),
                                         ),
                                       const SizedBox(height: 6),
@@ -297,7 +297,7 @@ class _CartScreenState extends State<CartScreen> {
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 16,
-                                          color: Color(0xFF9B0F06),
+                                          color: Color(0xFF5E0006),
                                         ),
                                       ),
                                     ],
@@ -395,7 +395,7 @@ class _CartScreenState extends State<CartScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text('Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                Text(_formatPrice(total), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF9B0F06))),
+                                Text(_formatPrice(total), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF5E0006))),
                               ],
                             ),
                           ],
@@ -454,7 +454,7 @@ class _CartScreenState extends State<CartScreen> {
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFD53E0F),
+                            backgroundColor: const Color(0xFF5E0006),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),

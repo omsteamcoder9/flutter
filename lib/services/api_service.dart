@@ -547,5 +547,14 @@ static Future<PrivacyData> getPrivacy() async {
   }
 }
 
-
+ static Future<Map<String, dynamic>> getPublicSettings() async {
+    try {
+      final response = await get('/settings/public');
+      return response['data'] ?? {};
+    } catch (e) {
+      throw Exception('Failed to load settings: $e');
+    }
+  }
 }
+
+

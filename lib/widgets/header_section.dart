@@ -24,11 +24,27 @@ class HeaderSection extends StatefulWidget {
 class _HeaderSectionState extends State<HeaderSection> {
   List<dynamic> _categories = [];
   final TextEditingController _searchController = TextEditingController();
+  String _siteName = 'SeaFood'; // Default value
 
   @override
   void initState() {
     super.initState();
     _loadCategories();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final settings = await ApiService.getPublicSettings();
+      if (mounted) {
+        setState(() {
+          _siteName = settings['siteName'] ?? 'SeaFood';
+        });
+      }
+    } catch (e) {
+      // Keep default value if API fails
+      print('Error loading settings: $e');
+    }
   }
 
   Future<void> _loadCategories() async {
@@ -95,25 +111,16 @@ class _HeaderSectionState extends State<HeaderSection> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFD53E0F), Color(0xFF5E0006)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Center(
-                        child: Text('🐟', style: TextStyle(fontSize: 16)),
-                      ),
+                    Image.asset(
+                      'assets/images/logo.png',
+                      width: 38,
+                      height: 38,
+                      fit: BoxFit.contain,
                     ),
                     const SizedBox(width: 8),
-                    const Text(
-                      'SeaFood',
-                      style: TextStyle(
+                    Text(
+                      _siteName,
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF5E0006),
@@ -197,24 +204,20 @@ class _HeaderSectionState extends State<HeaderSection> {
     );
   }
   
-String _getCategoryImageUrl(dynamic imageData) {
-  String imagePath = '';
-  if (imageData is String) {
-    imagePath = imageData;
-  } else if (imageData is Map && imageData.containsKey('image')) {
-    imagePath = imageData['image'];
+  String _getCategoryImageUrl(dynamic imageData) {
+    String imagePath = '';
+    if (imageData is String) {
+      imagePath = imageData;
+    } else if (imageData is Map && imageData.containsKey('image')) {
+      imagePath = imageData['image'];
+    }
+    if (imagePath.isEmpty) return '';
+    if (imagePath.startsWith('http')) return imagePath;
+    
+    if (imagePath.startsWith('/')) imagePath = imagePath.substring(1);
+    
+    return '${ApiService.imageBaseUrl}/$imagePath';
   }
-  if (imagePath.isEmpty) return '';
-  if (imagePath.startsWith('http')) return imagePath;
-  
-  // Remove leading slash only
-  if (imagePath.startsWith('/')) imagePath = imagePath.substring(1);
-  
-  // DO NOT remove 'uploads/' - keep it as is
-  // Because ApiService.imageBaseUrl returns base URL without /uploads
-  
-  return '${ApiService.imageBaseUrl}/$imagePath';
-}
   
   Widget _buildCategoryTabWithImage(String title, String? imageUrl, bool isActive, {required String categoryId}) {
     return GestureDetector(
@@ -283,8 +286,6 @@ String _getCategoryImageUrl(dynamic imageData) {
     );
   }
 }
-
-
 
 // ========== FULL SCREEN SEARCH MODAL ==========
 class FullScreenSearchModal extends StatefulWidget {

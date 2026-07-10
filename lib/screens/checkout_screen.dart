@@ -634,7 +634,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Shipping'),
-                        const Text('FREE', style: TextStyle(color: Color(0xFFD53E0F))),
+                        const Text('FREE', style: TextStyle(color: Color(0xFF5E0006))),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -655,7 +655,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                         Text(
                           '₹${total.toInt()}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF9B0F06)),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF5E0006)),
                         ),
                       ],
                     ),
@@ -729,7 +729,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           _paymentMethod = value!;
                         });
                       },
-                      activeColor: const Color(0xFFD53E0F),
+                      activeColor: const Color(0xFF5E0006),
                     ),
                     RadioListTile<String>(
                       title: const Text('Razorpay (Card/UPI/NetBanking)'),
@@ -740,7 +740,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           _paymentMethod = value!;
                         });
                       },
-                      activeColor: const Color(0xFFD53E0F),
+                      activeColor: const Color(0xFF5E0006),
                     ),
                   ],
                 ),
@@ -769,7 +769,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _placeOrder,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFD53E0F),
+                    backgroundColor: const Color(0xFF5E0006),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -823,7 +823,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: const Color(0xFFD53E0F)),
+        prefixIcon: Icon(icon, color: const Color(0xFF5E0006)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -834,7 +834,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFD53E0F)),
+          borderSide: const BorderSide(color: Color(0xFF5E0006)),
         ),
       ),
       validator: (value) {

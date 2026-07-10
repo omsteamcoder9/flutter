@@ -148,7 +148,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
                   const Icon(
                     Icons.check_circle,
                     size: 80,
-                    color: Color(0xFFD53E0F),
+                    color: Color(0xFF5E0006),
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -308,7 +308,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
                         Navigator.popUntil(context, (route) => route.isFirst);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD53E0F),
+                        backgroundColor: const Color(0xFF5E0006),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -364,7 +364,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
             style: TextStyle(
               fontSize: isTotal ? 16 : 14,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: isTotal ? const Color(0xFFD53E0F) : null,
+              color: isTotal ? const Color(0xFF5E0006) : null,
             ),
           ),
         ],
