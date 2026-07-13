@@ -1,0 +1,4 @@
+storePassword=ajayanitha
+keyPassword=ajayanitha
+keyAlias=upload
+storeFile=../upload-keystore.jks

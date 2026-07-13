@@ -8,7 +8,7 @@ class ProductCard extends StatelessWidget {
   final String? guestId;
   final String? token;
   final VoidCallback? onCartUpdate;
-  final Set<String>? cartProductIds; // ✅ ADD THIS - Set of product IDs in cart
+  final Set<String>? cartProductIds;
 
   const ProductCard({
     required this.product,
@@ -16,7 +16,7 @@ class ProductCard extends StatelessWidget {
     this.guestId,
     this.token,
     this.onCartUpdate,
-    this.cartProductIds, // ✅ ADD THIS
+    this.cartProductIds,
     super.key,
   });
 
@@ -28,7 +28,6 @@ class ProductCard extends StatelessWidget {
   }
 
   String _getImageUrl() {
-    // PRIORITY 1: Get image from variants
     if (product['variants'] != null && product['variants'].isNotEmpty) {
       final variant = product['variants'][0];
       if (variant['images'] != null && variant['images'].isNotEmpty) {
@@ -38,14 +37,11 @@ class ProductCard extends StatelessWidget {
         return '${ApiService.imageBaseUrl}/$imagePath';
       }
     }
-    
-    // PRIORITY 2: Fallback to ogImage
     if (product['ogImage'] != null && product['ogImage'].toString().isNotEmpty) {
       String imagePath = product['ogImage'];
       if (imagePath.startsWith('/')) imagePath = imagePath.substring(1);
       return '${ApiService.imageBaseUrl}/$imagePath';
     }
-    
     return '';
   }
 
@@ -56,10 +52,8 @@ class ProductCard extends StatelessWidget {
     final originalPrice = (product['originalPrice'] ?? basePrice * 1.2).toDouble();
     final isOutOfStock = (product['stock'] ?? 0) <= 0;
     final imageUrl = _getImageUrl();
-    
-    // ✅ Check if product is in cart
     final bool isInCart = cartProductIds != null && cartProductIds!.contains(product['_id']);
-    
+
     String weightLabel = 'ESSENTIALS';
     if (product['variants'] != null && product['variants'].isNotEmpty) {
       final variant = product['variants'][0];
@@ -93,7 +87,7 @@ class ProductCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Image Section
+            // ✅ Image Section - Fixed height
             Container(
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -102,23 +96,29 @@ class ProductCard extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: AspectRatio(
-                  aspectRatio: 4 / 3,
-                  child: imageUrl.isNotEmpty
-                      ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Center(
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: 120, // ✅ Fixed height works on all devices
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 120,
+                            color: const Color(0xFFF3F3F3),
+                            child: Center(
                               child: Icon(Icons.image, color: Colors.grey.shade400, size: 40),
-                            );
-                          },
-                        )
-                      : Center(
+                            ),
+                          );
+                        },
+                      )
+                    : Container(
+                        height: 120,
+                        color: const Color(0xFFF3F3F3),
+                        child: Center(
                           child: Icon(Icons.image, color: Colors.grey.shade400, size: 40),
                         ),
-                ),
+                      ),
               ),
             ),
             // Content Section
@@ -128,7 +128,6 @@ class ProductCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Weight Label
                   Text(
                     weightLabel,
                     style: TextStyle(
@@ -139,7 +138,6 @@ class ProductCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  // Product Name - 2 lines supported
                   Text(
                     product['name'] ?? 'Product',
                     maxLines: 2,
@@ -152,7 +150,6 @@ class ProductCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  // Stock Status
                   if (!isOutOfStock)
                     Row(
                       children: [
@@ -178,11 +175,9 @@ class ProductCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Divider(height: 1, color: Colors.grey.shade50),
                   const SizedBox(height: 8),
-                  // Price & Button Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Price Column
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
@@ -221,40 +216,39 @@ class ProductCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                 // Add To Cart Button - UPDATED with Added state (no color change)
-GestureDetector(
-  onTap: (isOutOfStock || isInCart) ? null : onAddToCart,
-  child: Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    decoration: BoxDecoration(
-      color: isOutOfStock 
-          ? Colors.grey.shade400 
-          : const Color(0xFF9B0F06), // Same red color for both "Add" and "Added"
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          isInCart ? Icons.check : Icons.shopping_bag_outlined,
-          color: Colors.white,
-          size: 12,
-        ),
-        const SizedBox(width: 4),
-        Text(
-          isOutOfStock 
-              ? 'Out Of Stock' 
-              : (isInCart ? 'In Cart' : 'Add To Cart'), // Only text changes to "Added"
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    ),
-  ),
-),
+                      GestureDetector(
+                        onTap: (isOutOfStock || isInCart) ? null : onAddToCart,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isOutOfStock 
+                                ? Colors.grey.shade400 
+                                : const Color(0xFF9B0F06),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isInCart ? Icons.check : Icons.shopping_bag_outlined,
+                                color: Colors.white,
+                                size: 12,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isOutOfStock 
+                                    ? 'Out Of Stock' 
+                                    : (isInCart ? 'In Cart' : 'Add To Cart'),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ],
