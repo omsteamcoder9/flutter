@@ -24,7 +24,7 @@ class HeaderSection extends StatefulWidget {
 class _HeaderSectionState extends State<HeaderSection> {
   List<dynamic> _categories = [];
   final TextEditingController _searchController = TextEditingController();
-  String _siteName = 'SeaFood'; // Default value
+  String _siteName = 'Meenavan Fresh'; // Default value
 
   @override
   void initState() {
@@ -38,7 +38,7 @@ class _HeaderSectionState extends State<HeaderSection> {
       final settings = await ApiService.getPublicSettings();
       if (mounted) {
         setState(() {
-          _siteName = settings['siteName'] ?? 'SeaFood';
+          _siteName = settings['siteName'] ?? 'MeenavanFresh';
         });
       }
     } catch (e) {
@@ -90,7 +90,7 @@ class _HeaderSectionState extends State<HeaderSection> {
     return SafeArea(
       bottom: false,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.min,       
         children: [
           // ========== TOP HEADER (ONLY LOGO + SEARCH BAR) ==========
           Container(
@@ -112,7 +112,7 @@ class _HeaderSectionState extends State<HeaderSection> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Image.asset(
-                      'assets/images/logo.png',
+                      'assets/images/logo.jpg',
                       width: 38,
                       height: 38,
                       fit: BoxFit.contain,

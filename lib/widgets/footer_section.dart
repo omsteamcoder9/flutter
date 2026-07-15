@@ -10,7 +10,7 @@ class FooterSection extends StatefulWidget {
 
 class _FooterSectionState extends State<FooterSection> {
   String _siteName = 'Sea Food';
-  String _contactEmail = 'support@seafood.com';
+  String _contactEmail = 'support@MeenavanFresh.com';
   String _contactNumber = '+91 98765 43210';
   String _companyAddress = 'Mumbai, India';
   String _footerText = '';
@@ -132,7 +132,7 @@ class _FooterSectionState extends State<FooterSection> {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 24),
             child: Text(
-              "India's fastest growing seafood platform. Get the freshest catches delivered instantly at minimal cost.",
+              "India's fastest growing MeenavanFresh platform. Get the freshest catches delivered instantly at minimal cost.",
               style: TextStyle(
                 fontSize: 13,
                 color: Color(0xFFEED9B9),

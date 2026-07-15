@@ -32,7 +32,6 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   String _guestId = '';
   int _currentIndex = 0;
   bool _isInitialized = false;
-  bool _isUpdating = false;
 
   late CartProvider _cartProvider;
   late AuthProvider _authProvider;
@@ -42,18 +41,6 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     super.initState();
     _loadGuestId();
     _loadProducts();
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _authProvider.addListener(() {
-        if (!_isUpdating) {
-          _isUpdating = true;
-          _loadGuestId();
-          _cartProvider.refreshCartCount();
-          setState(() {});
-          _isUpdating = false;
-        }
-      });
-    });
   }
 
   @override
@@ -61,8 +48,6 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     super.didChangeDependencies();
     _cartProvider = Provider.of<CartProvider>(context, listen: false);
     _authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
-    // ✅ DO NOT call _loadGuestId() here - it's already in initState
     
     if (_guestId.isNotEmpty && !_isInitialized) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -120,10 +105,6 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
         token: _authProvider.isLoggedIn ? _authProvider.token : null,
         isLoggedIn: _authProvider.isLoggedIn,
       );
-      
-      if (mounted) {
-        setState(() {});
-      }
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -187,6 +168,25 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     final cartCount = Provider.of<CartProvider>(context).cartCount;
     final cartProductIds = Provider.of<CartProvider>(context).cartProductIds;
     
+    // ✅ Responsive grid configuration
+    final screenWidth = MediaQuery.of(context).size.width;
+    int crossAxisCount;
+    double childAspectRatio;
+    
+    if (screenWidth < 400) {
+      crossAxisCount = 2;
+      childAspectRatio = 0.65;
+    } else if (screenWidth < 600) {
+      crossAxisCount = 2;
+      childAspectRatio = 0.70;
+    } else if (screenWidth < 900) {
+      crossAxisCount = 3;
+      childAspectRatio = 0.75;
+    } else {
+      crossAxisCount = 4;
+      childAspectRatio = 0.80;
+    }
+    
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -239,9 +239,9 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                         ? const Center(child: Text('No products found'))
                         : GridView.builder(
                             padding: const EdgeInsets.all(12),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 0.68,
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              childAspectRatio: childAspectRatio,
                               crossAxisSpacing: 12,
                               mainAxisSpacing: 12,
                             ),

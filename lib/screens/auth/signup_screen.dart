@@ -354,9 +354,9 @@ class _SignupScreenState extends State<SignupScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildFooterLink('Terms'),
+                  _buildFooterLink(''),
                   const SizedBox(width: 24),
-                  _buildFooterLink('Privacy'),
+                  _buildFooterLink(''),
                 ],
               ),
               
@@ -364,7 +364,7 @@ class _SignupScreenState extends State<SignupScreen> {
               
               const Center(
                 child: Text(
-                  '🐟 SeaFood',
+                  '',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

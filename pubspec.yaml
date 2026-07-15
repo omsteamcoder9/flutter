@@ -37,6 +37,6 @@ flutter:
 flutter_icons:                        # ✅ ADDED
   android: true
   ios: false
-  image_path: "assets/images/logo.png"
+  image_path: "assets/images/logo.jpg"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/logo.png"
+  adaptive_icon_foreground: "assets/images/logo.jpg"

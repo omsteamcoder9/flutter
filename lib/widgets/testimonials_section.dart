@@ -19,13 +19,13 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
       'name': 'Rajesh Kumar',
       'location': 'Chennai',
       'rating': 5,
-      'text': 'Sea Food has been my go-to for fresh seafood. The quality is exceptional and delivery is always on time.',
+      'text': 'Sea Food has been my go-to for fresh MeenavanFresh. The quality is exceptional and delivery is always on time.',
     },
     {
       'name': 'Priya Sharma',
       'location': 'Mumbai',
       'rating': 5,
-      'text': 'Excellent quality seafood delivered right to my doorstep. The packaging is perfect and the fish stays fresh.',
+      'text': 'Excellent quality MeenavanFresh delivered right to my doorstep. The packaging is perfect and the fish stays fresh.',
     },
     {
       'name': 'Murugan Selvam',
@@ -37,13 +37,13 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
       'name': 'Lakshmi Devi',
       'location': 'Bangalore',
       'rating': 5,
-      'text': 'Finally found a reliable seafood supplier! The freshness is unmatched and the prices are reasonable.',
+      'text': 'Finally found a reliable MeenavanFresh supplier! The freshness is unmatched and the prices are reasonable.',
     },
     {
       'name': 'Karthik Raman',
       'location': 'Hyderabad',
       'rating': 5,
-      'text': 'Professional service with excellent seafood quality. Their selection of fish varieties is impressive.',
+      'text': 'Professional service with excellent MeenavanFresh quality. Their selection of fish varieties is impressive.',
     },
   ];
 

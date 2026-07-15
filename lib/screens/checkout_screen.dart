@@ -51,8 +51,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Map<String, dynamic>? _buyNowItem;
   bool _isBuyNowMode = false;
   
-  int _currentIndex = 1; // Cart tab selected
+  int _currentIndex = 1;
   int _cartCount = 0;
+
+  // ========== WARD STATE ==========
+  List<Map<String, dynamic>> _wards = [];
+  int? _selectedWardId;
+  List<String> _streetsForSelectedWard = [];
+  String? _selectedStreet;
+  bool _loadingWards = false;
 
   @override
   void initState() {
@@ -60,13 +67,38 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _checkBuyNowOrder();
     _loadCartData();
     _loadCartCount();
+    _loadWards();
+  }
+
+  // ========== LOAD WARDS ==========
+  Future<void> _loadWards() async {
+    setState(() => _loadingWards = true);
+    try {
+      final wards = await ApiService.getWards();
+      setState(() => _wards = wards);
+    } catch (e) {
+      print('Error loading wards: $e');
+    } finally {
+      setState(() => _loadingWards = false);
+    }
+  }
+
+  Future<void> _loadStreetsForWard(int wardId) async {
+    try {
+      final streets = await ApiService.getStreetsByWard(wardId);
+      setState(() => _streetsForSelectedWard = streets);
+    } catch (e) {
+      print('Error loading streets: $e');
+      setState(() => _streetsForSelectedWard = []);
+    }
   }
 
   Future<void> _loadCartCount() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final prefs = await SharedPreferences.getInstance();
       final isLoggedIn = authProvider.isLoggedIn;
-      final token = authProvider.token;
+      final token = prefs.getString('auth_token');
       
       final response = await ApiService.getCart(
         guestId: isLoggedIn ? null : widget.guestId,
@@ -193,7 +225,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Future<void> _placeOrder() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // City validation - Karaikudi only
     final city = _cityController.text.trim().toLowerCase();
     final allowedCities = ['karaikudi', 'karaikudi.', 'karaikudi,', 'karaikudi '];
     bool isDeliverable = allowedCities.any((allowed) => city.contains(allowed));
@@ -209,7 +240,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    // Street validation
     final street = _streetController.text.trim();
     if (street.isEmpty || street.length < 5) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -221,7 +251,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    // Phone validation
     final phone = _phoneController.text.trim();
     if (phone.length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -243,11 +272,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final token = authProvider.token;
       final isLoggedIn = authProvider.isLoggedIn;
 
-      // Prepare products array based on Buy Now mode
       List<Map<String, dynamic>> products = [];
       
       if (_isBuyNowMode && _buyNowItem != null) {
-        // Buy Now mode - Use only the selected product
         products = [
           {
             'product': _buyNowItem!['productId'],
@@ -259,7 +286,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ];
         print('🛒 Buy Now mode - Ordering 1 product: ${_buyNowItem!['productName']}');
       } else {
-        // Normal checkout - Fetch cart items from API
         print('🛒 Normal checkout - Fetching cart items');
         final cartResponse = await ApiService.getCart(
           guestId: widget.guestId,
@@ -306,7 +332,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'products': products,
       };
       
-      // Add skipCartClear for Buy Now mode
       if (_isBuyNowMode) {
         orderData['skipCartClear'] = true;
       }
@@ -349,7 +374,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final order = responseData['order'];
       final requiresPayment = responseData['requiresPayment'] ?? false;
 
-      // Clear Buy Now order from SharedPreferences after successful order
       if (_isBuyNowMode) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('buy_now_order');
@@ -357,12 +381,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
 
       if (!requiresPayment) {
-        // COD order
         print('🔵 Calling widget.onOrderPlaced() for COD order');
         widget.onOrderPlaced();
         print('🔵 widget.onOrderPlaced() completed');
         
-        // Force refresh cart count
         final authProviderRefresh = Provider.of<AuthProvider>(context, listen: false);
         if (authProviderRefresh.isLoggedIn) {
           authProviderRefresh.notifyListeners();
@@ -380,7 +402,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           );
         }
       } else {
-        // Razorpay payment - open browser
         await _openRazorpayPayment(order);
       }
     } catch (e) {
@@ -403,7 +424,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    // Open payment page in browser
     final paymentUrl = '${ApiService.baseUrl}/payment-page/${order['orderId']}';
     final uri = Uri.parse(paymentUrl);
     
@@ -415,7 +435,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _isLoading = false;
       });
     } else {
-      // Wait for user to complete payment and return
       await _checkPaymentAfterReturn(order['orderId']);
     }
   }
@@ -423,8 +442,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Future<void> _checkPaymentAfterReturn(String orderId) async {
     print('🔵 _checkPaymentAfterReturn START for order: $orderId');
     
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final token = authProvider.token;
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
     
     await Future.delayed(const Duration(seconds: 3));
     
@@ -438,7 +457,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     
     bool paymentCompleted = false;
     
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 30; i++) {
       await Future.delayed(const Duration(seconds: 2));
       print('🔵 Checking payment status attempt ${i+1}...');
       
@@ -465,25 +484,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
     
     if (mounted) {
-      Navigator.pop(context); // Close loading
+      Navigator.pop(context);
     }
     
     if (paymentCompleted && mounted) {
       print('🔵 NAVIGATING TO ORDER SUCCESS SCREEN');
       widget.onOrderPlaced();
       
-      // Force refresh cart count
       final authProviderRefresh = Provider.of<AuthProvider>(context, listen: false);
       if (authProviderRefresh.isLoggedIn) {
         authProviderRefresh.notifyListeners();
       }
+      
+      final fullOrder = await ApiService.getOrderById(orderId);
       
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => OrderSuccessScreen(
             orderId: orderId,
-            orderData: {'orderId': orderId},
+            orderData: fullOrder,
           ),
         ),
       );
@@ -520,7 +540,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Buy Now Banner
               if (_isBuyNowMode && _buyNowItem != null)
                 Container(
                   margin: const EdgeInsets.only(bottom: 16),
@@ -688,13 +707,146 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     const SizedBox(height: 12),
                     _buildTextField(_emailController, 'Email Address', Icons.email, keyboardType: TextInputType.emailAddress),
                     const SizedBox(height: 12),
-                    _buildTextField(_streetController, 'Street Address', Icons.location_on),
+                    
+                    // ========== WARD DROPDOWN - FIXED OVERFLOW ==========
+                    DropdownButtonFormField<int>(
+                      value: _selectedWardId,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: 'Select Ward *',
+                        prefixIcon: const Icon(Icons.map, color: Color(0xFF5E0006)),
+                        suffixIcon: const Icon(Icons.arrow_drop_down, color: Color(0xFF5E0006)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                          borderSide: BorderSide(color: Color(0xFF5E0006)),
+                        ),
+                      ),
+                      items: _wards.map((ward) {
+                        return DropdownMenuItem<int>(
+                          value: ward['wardId'],
+                          child: SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.75,
+                            child: Text(
+                              'Ward ${ward['wardId']} - ${ward['wardName']}',
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: true,
+                              maxLines: 2,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: _loadingWards ? null : (value) {
+                        setState(() {
+                          _selectedWardId = value;
+                          _selectedStreet = null;
+                          _streetController.clear();
+                          if (value != null) {
+                            _loadStreetsForWard(value);
+                          } else {
+                            _streetsForSelectedWard = [];
+                          }
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a ward';
+                        }
+                        return null;
+                      },
+                    ),
                     const SizedBox(height: 12),
-                    _buildTextField(_cityController, 'City', Icons.location_city),
+
+                    // ========== STREET DROPDOWN - FIXED OVERFLOW ==========
+                    DropdownButtonFormField<String>(
+                      value: _selectedStreet,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: 'Street Address *',
+                        prefixIcon: const Icon(Icons.location_on, color: Color(0xFF5E0006)),
+                        suffixIcon: const Icon(Icons.arrow_drop_down, color: Color(0xFF5E0006)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                          borderSide: BorderSide(color: Color(0xFF5E0006)),
+                        ),
+                      ),
+                      items: _streetsForSelectedWard.map((street) {
+                        return DropdownMenuItem<String>(
+                          value: street,
+                          child: SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.75,
+                            child: Text(
+                              street,
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: true,
+                              maxLines: 2,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: _selectedWardId == null ? null : (value) {
+                        setState(() {
+                          _selectedStreet = value;
+                          _streetController.text = value ?? '';
+                        });
+                      },
+                      validator: (value) {
+                        if (_selectedWardId == null) {
+                          return 'Please select a ward first';
+                        }
+                        if (value == null || value.isEmpty) {
+                          return 'Please select a street';
+                        }
+                        return null;
+                      },
+                    ),
                     const SizedBox(height: 12),
+
+                    // ========== CITY - READ ONLY ==========
+                    TextFormField(
+                      controller: _cityController,
+                      readOnly: true,
+                      decoration: InputDecoration(
+                        labelText: 'City *',
+                        prefixIcon: const Icon(Icons.location_city, color: Color(0xFF5E0006)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                          borderSide: BorderSide(color: Color(0xFF5E0006)),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    
                     _buildTextField(_stateController, 'State', Icons.map),
                     const SizedBox(height: 12),
                     _buildTextField(_postalCodeController, 'Postal Code', Icons.code, keyboardType: TextInputType.number),
+                    const SizedBox(height: 12),
+                    _buildTextField(_countryController, 'Country', Icons.public),
                   ],
                 ),
               ),
@@ -763,7 +915,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
               const SizedBox(height: 24),
 
-              // Place Order Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -825,16 +976,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         labelText: label,
         prefixIcon: Icon(icon, color: const Color(0xFF5E0006)),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.all(Radius.circular(10)),
           borderSide: BorderSide(color: Colors.grey.shade300),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.all(Radius.circular(10)),
           borderSide: BorderSide(color: Colors.grey.shade300),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF5E0006)),
+        focusedBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+          borderSide: BorderSide(color: Color(0xFF5E0006)),
         ),
       ),
       validator: (value) {

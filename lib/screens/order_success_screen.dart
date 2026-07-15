@@ -10,6 +10,7 @@ import '../widgets/bottom_nav_bar.dart';
 import '../widgets/cart_drawer.dart';
 import 'auth/signup_screen.dart';
 import 'profile/profile_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OrderSuccessScreen extends StatefulWidget {
   final String orderId;
@@ -40,9 +41,9 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
 
   Future<void> _loadCartCount() async {
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final isLoggedIn = authProvider.isLoggedIn;
-      final token = authProvider.token;
+     final prefs = await SharedPreferences.getInstance();
+final token = prefs.getString('auth_token');
+final isLoggedIn = token != null && token.isNotEmpty;
       
       final response = await ApiService.getCart(
         guestId: isLoggedIn ? null : null,
@@ -61,11 +62,11 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
 
   Future<void> _loadReceipt() async {
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final token = authProvider.token;
+    final prefs = await SharedPreferences.getInstance();
+final token = prefs.getString('auth_token');
       
       final response = await http.get(
-        Uri.parse('${ApiService.baseUrl}/orders/${widget.orderData['_id']}/receipt'),
+Uri.parse('${ApiService.baseUrl}/orders/${widget.orderId}/receipt'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
@@ -86,10 +87,10 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
     }
   }
 
-  void _openCart() {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    String? guestIdToUse = authProvider.isLoggedIn ? null : null;
-    String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
+void _openCart() {
+  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  String? guestIdToUse = authProvider.isLoggedIn ? null : null;
+  String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
     
     Navigator.push(
       context,

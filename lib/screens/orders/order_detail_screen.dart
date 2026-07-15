@@ -642,11 +642,13 @@ Future<void> _refreshOrderDetails() async {
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
+String _formatDate(DateTime date) {
+  final localDate = date.toLocal();  // ✅ Add this
+  return '${localDate.day}/${localDate.month}/${localDate.year}';
+}
 
-  String _formatDateTime(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
+String _formatDateTime(DateTime date) {
+  final localDate = date.toLocal();  // ✅ Add this
+  return '${localDate.day}/${localDate.month}/${localDate.year} ${localDate.hour.toString().padLeft(2, '0')}:${localDate.minute.toString().padLeft(2, '0')}';
+}
 }

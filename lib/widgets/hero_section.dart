@@ -79,7 +79,7 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
   }
 
   String _getProductName(dynamic product) {
-    String name = product['name'] ?? 'Seafood';
+    String name = product['name'] ?? 'MeenavanFresh';
     if (name.length > 25) {
       name = name.substring(0, 22) + '...';
     }
@@ -252,7 +252,7 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
                       );
                     },
                     child: Text(
-                      'Fresh premium quality seafood delivered to your doorstep',
+                      'Fresh premium quality MeenavanFresh delivered to your doorstep',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,

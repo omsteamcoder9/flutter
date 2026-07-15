@@ -303,7 +303,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void _onSearchSubmit() {}
   void _onSearchQueryChanged(String query) {}
 
-  Future<void> _addToCart() async {
+  // ✅ FIXED: Reusable add to cart method for any product
+  Future<void> _addToCartProduct(dynamic product) async {
     if (_isOutOfStock()) return;
 
     setState(() {
@@ -311,11 +312,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     });
 
     try {
-      final variantId = _selectedVariant?['_id'] ?? '';
+      String variantId = '';
+      if (product['variants'] != null && product['variants'].isNotEmpty) {
+        variantId = product['variants'][0]['_id'] ?? '';
+      }
+      
+      // Use product's price if available, otherwise use selected variant price
+      double price = product['price'] ?? _getCurrentPrice();
       
       final response = await ApiService.addToCart(
-        _product!['_id'],
-        _quantity,
+        product['_id'],
+        1,  // Default quantity for related products
         variantId,
         guestId: _guestId,
         token: _authToken,
@@ -367,6 +374,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         });
       }
     }
+  }
+
+  Future<void> _addToCart() async {
+    if (_isOutOfStock()) return;
+    await _addToCartProduct(_product!);
   }
 
   Future<void> _buyNow() async {
@@ -1040,6 +1052,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  // ✅ FIXED: Related Products with working Add to Cart
   Widget _buildRelatedProductsSection(Set<String> cartProductIds) {
     return Column(
       children: [
@@ -1067,7 +1080,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 4),
                 child: ProductCard(
                   product: product,
-                  onAddToCart: () {},
+                  onAddToCart: () => _addToCartProduct(product), // ✅ FIXED
+                  guestId: _guestId,
+                  token: _authProvider.isLoggedIn ? _authProvider.token : null,
+                  onCartUpdate: () {
+                    _refreshCartCount();
+                    _cartProvider.refreshCartCount();
+                  },
                   cartProductIds: cartProductIds,
                 ),
               );

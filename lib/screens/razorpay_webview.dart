@@ -148,7 +148,7 @@
 //                   key: data.key,
 //                   amount: ${(widget.amount * 100).toString()},
 //                   currency: 'INR',
-//                   name: 'SeaFood',
+//                   name: 'MeenavanFresh',
 //                   description: 'Order ${widget.orderId}',
 //                   order_id: data.order.id,
 //                   prefill: {

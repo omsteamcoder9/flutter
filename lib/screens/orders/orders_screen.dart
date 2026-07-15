@@ -28,7 +28,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
     });
 
     try {
-      // ✅ Use STATIC method directly
       final orders = await ApiService.getUserOrders();
       setState(() {
         _orders = orders;
@@ -219,7 +218,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             ),
           ),
           
-          // Order Items Preview
+          // Order Items Preview - NO IMAGE, NO ICON
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -228,27 +227,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: product.image != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  '${ApiService.imageBaseUrl}${product.image}',
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(Icons.image_not_supported, size: 20);
-                                  },
-                                ),
-                              )
-                            : const Icon(Icons.fastfood, size: 20, color: Colors.grey),
-                      ),
-                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,24 +319,24 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         child: const Text('Cancel'),
                       ),
                     const SizedBox(width: 8),
-                  ElevatedButton(
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => OrderDetailScreen(order: order),
-      ),
-    ).then((_) => _loadOrders());
-  },
-  style: ElevatedButton.styleFrom(
-    backgroundColor: const Color(0xFF9B0F06),  // Red background
-    foregroundColor: Colors.white,  // ← ADD THIS - forces white text
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-  ),
-  child: const Text('View Details'),
-),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => OrderDetailScreen(order: order),
+                          ),
+                        ).then((_) => _loadOrders());
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF9B0F06),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('View Details'),
+                    ),
                   ],
                 ),
               ],
@@ -419,7 +397,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
 
     try {
-      // ✅ Use STATIC method directly
       final response = await ApiService.cancelOrder(order.id, reason: reason.isEmpty ? null : reason);
       
       if (mounted) {
@@ -455,7 +432,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
+String _formatDate(DateTime date) {
+  // Convert UTC to local timezone
+  final localDate = date.toLocal();
+  return '${localDate.day}/${localDate.month}/${localDate.year} ${localDate.hour.toString().padLeft(2, '0')}:${localDate.minute.toString().padLeft(2, '0')}';
+}
 }

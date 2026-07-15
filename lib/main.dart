@@ -99,7 +99,6 @@ class _HomeScreenState extends State<HomeScreen> {
       authProvider.addListener(() {
         print('🔄 AuthProvider listener triggered - isLoggedIn: ${authProvider.isLoggedIn}');
         if (mounted) {
-          // ✅ Update CartProvider based on login/logout state
           if (authProvider.isLoggedIn) {
             _cartProvider.initialize(
               guestId: _guestId,
@@ -445,6 +444,25 @@ class _HomeScreenState extends State<HomeScreen> {
       productsByCategory[categoryName]!.add(product);
     }
     
+    // ✅ Responsive grid configuration
+    final screenWidth = MediaQuery.of(context).size.width;
+    int crossAxisCount;
+    double childAspectRatio;
+    
+    if (screenWidth < 400) {
+      crossAxisCount = 2;
+      childAspectRatio = 0.65;
+    } else if (screenWidth < 600) {
+      crossAxisCount = 2;
+      childAspectRatio = 0.7;
+    } else if (screenWidth < 900) {
+      crossAxisCount = 3;
+      childAspectRatio = 0.75;
+    } else {
+      crossAxisCount = 4;
+      childAspectRatio = 0.8;
+    }
+    
     return Container(
       margin: EdgeInsets.only(top: 16, bottom: 16),
       child: Column(
@@ -509,8 +527,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     shrinkWrap: true,
                     physics: NeverScrollableScrollPhysics(),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.68,
+                      crossAxisCount: crossAxisCount,
+                      childAspectRatio: childAspectRatio,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                     ),

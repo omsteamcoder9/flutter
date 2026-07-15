@@ -546,7 +546,51 @@ static Future<PrivacyData> getPrivacy() async {
     rethrow;
   }
 }
+  // ========== WARD METHODS ==========
 
+  static Future<List<Map<String, dynamic>>> getWards() async {
+    try {
+      final response = await get('/wards');
+      print('🔍 Wards API response: $response');
+      
+      if (response['success'] == true) {
+        final data = response['data'];
+        // Check if data has 'wards' key (your backend returns { success: true, data: { wards: [...] } })
+        if (data is Map && data.containsKey('wards')) {
+          return List<Map<String, dynamic>>.from(data['wards']);
+        }
+        // If data is directly the wards list
+        if (data is List) {
+          return data.cast<Map<String, dynamic>>();
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching wards: $e');
+      return [];
+    }
+  }
+
+  static Future<List<String>> getStreetsByWard(int wardId) async {
+    try {
+      final response = await get('/wards/$wardId/streets');
+      print('🔍 Streets API response: $response');
+      
+      if (response['success'] == true) {
+        final data = response['data'];
+        if (data is Map && data.containsKey('streets')) {
+          return List<String>.from(data['streets']);
+        }
+        if (data is List) {
+          return List<String>.from(data);
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching streets: $e');
+      return [];
+    }
+  }
  static Future<Map<String, dynamic>> getPublicSettings() async {
     try {
       final response = await get('/settings/public');
