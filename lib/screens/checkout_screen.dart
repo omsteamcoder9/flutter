@@ -13,7 +13,7 @@ import '../widgets/cart_drawer.dart';
 import 'auth/signup_screen.dart';
 import 'profile/profile_screen.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
-import '../models/order.dart';
+
 class CheckoutScreen extends StatefulWidget {
   final String? guestId;
   final VoidCallback onOrderPlaced;
@@ -58,6 +58,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _loadingWards = false;
 
   Razorpay? _razorpay;
+  Map<String, dynamic>? _pendingOrder;
+  bool _paymentHandled = false;
 
   @override
   void initState() {
@@ -67,59 +69,48 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _loadCartCount();
     _loadWards();
     
-    _initializeRazorpay();
+    _razorpay = Razorpay();
+    _razorpay?.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay?.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay?.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
   }
 
-void _initializeRazorpay() {
-  _razorpay = Razorpay();
+  Future<void> _handlePaymentSuccess(
+    PaymentSuccessResponse response,
+  ) async {
+    debugPrint('========================================');
+    debugPrint('✅ RAZORPAY PAYMENT SUCCESS');
+    debugPrint('Payment ID       : ${response.paymentId}');
+    debugPrint('Razorpay Order ID: ${response.orderId}');
+    debugPrint('Signature        : ${response.signature}');
+    debugPrint('========================================');
 
-  _razorpay?.on(
-    Razorpay.EVENT_PAYMENT_SUCCESS,
-    _handlePaymentSuccess,
-  );
+    if (_paymentHandled) {
+      debugPrint('⚠️ Duplicate payment callback ignored');
+      return;
+    }
 
-  _razorpay?.on(
-    Razorpay.EVENT_PAYMENT_ERROR,
-    _handlePaymentError,
-  );
+    final razorpayOrderId = response.orderId;
+    final razorpayPaymentId = response.paymentId;
+    final razorpaySignature = response.signature;
 
-  _razorpay?.on(
-    Razorpay.EVENT_EXTERNAL_WALLET,
-    _handleExternalWallet,
-  );
+    if (razorpayOrderId == null ||
+        razorpayOrderId.isEmpty ||
+        razorpayPaymentId == null ||
+        razorpayPaymentId.isEmpty ||
+        razorpaySignature == null ||
+        razorpaySignature.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage =
+            'Payment completed, but Razorpay verification data is missing.';
+      });
+      return;
+    }
 
-  print('✅ Razorpay initialized successfully');
-}
+    _paymentHandled = true;
 
-Future<void> _handlePaymentSuccess(
-  PaymentSuccessResponse response,
-) async {
-  print('========================================');
-  print('✅ RAZORPAY PAYMENT SUCCESS');
-  print('========================================');
-  print('Payment ID : ${response.paymentId}');
-  print('Razorpay Order ID : ${response.orderId}');
-  print('Signature : ${response.signature}');
-  print('========================================');
-
-  if (response.paymentId == null ||
-      response.paymentId!.isEmpty ||
-      response.orderId == null ||
-      response.orderId!.isEmpty ||
-      response.signature == null ||
-      response.signature!.isEmpty) {
-    if (!mounted) return;
-
-    setState(() {
-      _isLoading = false;
-      _errorMessage =
-          'Payment completed, but payment verification details are missing.';
-    });
-
-    return;
-  }
-
-  try {
     if (mounted) {
       setState(() {
         _isLoading = true;
@@ -127,193 +118,153 @@ Future<void> _handlePaymentSuccess(
       });
     }
 
-    final prefs = await SharedPreferences.getInstance();
+    // Retry verification because Google Pay/UPI can return successfully
+    // while the network request from Flutter is temporarily unavailable.
+    Map<String, dynamic>? verificationResponse;
+    Object? lastError;
 
-    // This is YOUR Mongo/custom order ID.
-    final mongoOrderId =
-        prefs.getString('razorpay_order_id');
-
-    if (mongoOrderId == null || mongoOrderId.isEmpty) {
-      throw Exception(
-        'Order ID was not found after successful payment.',
-      );
-    }
-
-    print('Mongo Order ID: $mongoOrderId');
-
-    // ============================================================
-    // IMPORTANT:
-    // DO NOT call widget.onOrderPlaced() here.
-    // DO NOT navigate Home here.
-    // DO NOT wait 10 seconds for webhook.
-    // ============================================================
-
-    // The Razorpay plugin has already reported a successful payment.
-    // Give the backend/webhook a short amount of time to update MongoDB.
-    //
-    // We retry a few times instead of doing one request that can
-    // timeout and send the user away from the success screen.
-    Order? fullOrder;
-
-    const maxAttempts = 5;
-
-    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+    for (int attempt = 1; attempt <= 3; attempt++) {
       try {
-        print(
-          '🔍 Checking confirmed order '
-          '($attempt/$maxAttempts)...',
-        );
+        debugPrint('🔐 Payment verification attempt $attempt/3');
 
-        final result =
-            await ApiService.getOrderById(mongoOrderId);
+        final result = await ApiService.verifyPayment({
+          'razorpay_order_id': razorpayOrderId,
+          'razorpay_payment_id': razorpayPaymentId,
+          'razorpay_signature': razorpaySignature,
+        });
 
-        if (result != null) {
-          final paymentStatus =
-              result.paymentStatus.toLowerCase();
-
-          final orderStatus =
-              result.orderStatus.toLowerCase();
-
-          print(
-            'Payment Status: $paymentStatus',
-          );
-
-          print(
-            'Order Status: $orderStatus',
-          );
-
-          fullOrder = result;
-
-          // Backend/webhook has confirmed the payment.
-          if (paymentStatus == 'paid' ||
-              paymentStatus == 'completed' ||
-              paymentStatus == 'captured' ||
-              orderStatus == 'confirmed') {
-            print('✅ ORDER PAYMENT CONFIRMED');
-            break;
-          }
+        if (result is Map<String, dynamic>) {
+          verificationResponse = result;
+        } else if (result is Map) {
+          verificationResponse = Map<String, dynamic>.from(result);
         }
-      } catch (e) {
-        print(
-          '⚠️ Order status check failed: $e',
+
+        if (verificationResponse?['success'] == true) {
+          break;
+        }
+
+        lastError = Exception(
+          verificationResponse?['message']?.toString() ??
+              'Payment verification failed.',
         );
+      } catch (e) {
+        lastError = e;
+        debugPrint('⚠️ Verification attempt $attempt failed: $e');
       }
 
-      if (attempt < maxAttempts) {
-        await Future.delayed(
-          const Duration(seconds: 1),
-        );
+      if (attempt < 3) {
+        await Future.delayed(Duration(seconds: attempt * 2));
       }
     }
 
-    // ============================================================
-    // If webhook/API has not updated yet, we still know Razorpay
-    // reported success. Fetch the order one final time if possible.
-    // ============================================================
+    try {
+      if (verificationResponse?['success'] != true) {
+        throw lastError ?? Exception('Payment verification failed.');
+      }
 
-    if (fullOrder == null) {
-      try {
-        fullOrder =
-            await ApiService.getOrderById(mongoOrderId);
-      } catch (e) {
-        print(
-          '⚠️ Final order fetch failed: $e',
+      final verifiedOrderRaw = verificationResponse?['order'];
+
+      if (verifiedOrderRaw is! Map) {
+        throw Exception(
+          'Payment verified, but order details were not returned by the server.',
         );
       }
-    }
 
-    if (fullOrder == null) {
-      throw Exception(
-        'Payment was successful, but the order could not be loaded.',
+      final successOrder = <String, dynamic>{};
+
+      if (_pendingOrder != null) {
+        successOrder.addAll(_pendingOrder!);
+      }
+
+      successOrder.addAll(
+        Map<String, dynamic>.from(verifiedOrderRaw),
       );
-    }
 
-    print('========================================');
-    print('🎉 FINAL ORDER');
-    print('Order ID: ${fullOrder.orderId}');
-    print('Payment Status: ${fullOrder.paymentStatus}');
-    print('Order Status: ${fullOrder.orderStatus}');
-    print('========================================');
+      final verifiedOrderId =
+          successOrder['orderId']?.toString() ??
+          _pendingOrder?['orderId']?.toString();
 
-    if (!mounted) return;
+      if (verifiedOrderId == null || verifiedOrderId.isEmpty) {
+        throw Exception(
+          'Payment verified, but order ID is missing.',
+        );
+      }
 
-    setState(() {
-      _isLoading = false;
-    });
+      debugPrint('========================================');
+      debugPrint('✅ PAYMENT VERIFIED SUCCESSFULLY');
+      debugPrint('Order ID: $verifiedOrderId');
+      debugPrint('Payment Status: ${successOrder['paymentStatus']}');
+      debugPrint('Order Status: ${successOrder['orderStatus']}');
+      debugPrint('========================================');
 
-    // ============================================================
-    // OPEN SUCCESS SCREEN
-    // ============================================================
+      if (!mounted) return;
 
-    print('🚀 Opening Order Success Screen...');
+      setState(() {
+        _isLoading = false;
+        _errorMessage = null;
+      });
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => OrderSuccessScreen(
-          orderId: fullOrder!.orderId,
-          orderData: fullOrder,
+      // Let the native Razorpay activity finish closing before Flutter
+      // pushes the success screen. This is especially important for UPI.
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      if (!mounted) return;
+
+      // Navigate FIRST. Do not call onOrderPlaced before navigation because
+      // the parent may rebuild/navigate away from this checkout screen.
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OrderSuccessScreen(
+            orderId: verifiedOrderId,
+            orderData: successOrder,
+          ),
         ),
-      ),
-    );
+      );
 
-    // ============================================================
-    // IMPORTANT:
-    // DO NOT call widget.onOrderPlaced() before navigation.
-    //
-    // If your parent needs refreshing, do it after the success
-    // screen, not before it.
-    // ============================================================
-  } catch (e, stackTrace) {
-    print('========================================');
-    print('❌ PAYMENT SUCCESS HANDLING ERROR');
-    print('========================================');
-    print('Error: $e');
-    print('StackTrace: $stackTrace');
-    print('========================================');
+      // Parent/cart refresh is intentionally after navigation.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          widget.onOrderPlaced();
 
-    if (!mounted) return;
+          final authProvider =
+              Provider.of<AuthProvider>(context, listen: false);
+          if (authProvider.isLoggedIn) {
+            authProvider.notifyListeners();
+          }
+        } catch (e) {
+          debugPrint('⚠️ Post-navigation order callback error: $e');
+        }
+      });
+    } catch (e, stackTrace) {
+      debugPrint('========================================');
+      debugPrint('❌ PAYMENT VERIFICATION FAILED');
+      debugPrint('Error: $e');
+      debugPrint('StackTrace: $stackTrace');
+      debugPrint('========================================');
 
+      if (!mounted) return;
+
+      setState(() {
+        _paymentHandled = false;
+        _isLoading = false;
+        _errorMessage =
+            'Payment could not be verified right now. Please check My Orders before trying again.';
+      });
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    print('❌ PAYMENT ERROR: ${response.message}');
     setState(() {
+      _errorMessage = 'Payment failed: ${response.message ?? 'Please try again.'}';
       _isLoading = false;
-      _errorMessage =
-          'Payment was successful, but we could not load your order. '
-          'Please check My Orders.';
     });
   }
-}
 
-void _handlePaymentError(
-  PaymentFailureResponse response,
-) {
-  print('');
-  print('========================================');
-  print('❌ RAZORPAY PAYMENT ERROR');
-  print('========================================');
-  print('Code    : ${response.code}');
-  print('Message : ${response.message}');
-  print('========================================');
-
-  if (mounted) {
-    setState(() {
-      _isLoading = false;
-      _errorMessage =
-          response.message?.toString() ??
-          'Payment failed. Please try again.';
-    });
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    print('🔵 EXTERNAL WALLET: ${response.walletName}');
   }
-}
-
-void _handleExternalWallet(
-  ExternalWalletResponse response,
-) {
-  print('');
-  print('========================================');
-  print('💳 RAZORPAY EXTERNAL WALLET');
-  print('========================================');
-  print('Wallet: ${response.walletName}');
-  print('========================================');
-}
 
   Future<void> _loadWards() async {
     setState(() => _loadingWards = true);
@@ -625,13 +576,10 @@ void _handleExternalWallet(
         await prefs.remove('pending_checkout');
       }
 
-      // ✅ Save order ID for verification
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('razorpay_order_id', order['orderId']);
-
       if (!requiresPayment) {
         print('🔵 Calling widget.onOrderPlaced() for COD order');
         widget.onOrderPlaced();
+        print('🔵 widget.onOrderPlaced() completed');
         
         final authProviderRefresh = Provider.of<AuthProvider>(context, listen: false);
         if (authProviderRefresh.isLoggedIn) {
@@ -650,7 +598,12 @@ void _handleExternalWallet(
           );
         }
       } else {
-        print('🔵 Opening Razorpay payment for order: ${order['orderId']}');
+        // Keep the complete order locally so the success screen can open
+        // immediately after backend payment verification without calling
+        // GET /orders/:id again.
+        _pendingOrder = Map<String, dynamic>.from(order);
+        _paymentHandled = false;
+
         await _openRazorpayPayment(order);
       }
     } catch (e) {
@@ -661,234 +614,65 @@ void _handleExternalWallet(
     }
   }
 
-Future<void> _openRazorpayPayment(dynamic order) async {
-  try {
-    final authProvider =
-        Provider.of<AuthProvider>(context, listen: false);
-
+  Future<void> _openRazorpayPayment(dynamic order) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final token = authProvider.token;
-
-    if (token == null || token.isEmpty) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Please login to continue';
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
-    print('📡 Creating Razorpay order...');
-
-    final response = await http.post(
-      Uri.parse(
-        '${ApiService.baseUrl}/payments/create-order',
-      ),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'orderId': order['orderId'],
-      }),
-    );
-
-    print('📡 Create order HTTP status: ${response.statusCode}');
-    print('📡 Create order body: ${response.body}');
-
-    if (response.statusCode < 200 ||
-        response.statusCode >= 300) {
-      throw Exception(
-        'Payment order creation failed (${response.statusCode})',
-      );
-    }
-
-    final data = jsonDecode(response.body);
-
-    print('📡 Razorpay order response: $data');
-
-    if (data['success'] != true) {
-      throw Exception(
-        data['message'] ??
-            'Failed to create payment order',
-      );
-    }
-
-    final razorpayOrder = data['order'];
-    final key = data['key'];
-
-    if (razorpayOrder == null) {
-      throw Exception(
-        'Razorpay order data is missing',
-      );
-    }
-
-    if (key == null ||
-        key.toString().trim().isEmpty) {
-      if (mounted) {
-        setState(() {
-          _errorMessage =
-              'Payment key not found. Please try again.';
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
-    final razorpayOrderId =
-        razorpayOrder['id']?.toString();
-
-    if (razorpayOrderId == null ||
-        razorpayOrderId.isEmpty) {
-      throw Exception(
-        'Razorpay order ID is missing',
-      );
-    }
-
-    // -------------------------------------------------------
-    // Save payment/order IDs locally
-    // -------------------------------------------------------
-
-    final prefs =
-        await SharedPreferences.getInstance();
-
-    await prefs.setString(
-      'razorpay_order_id',
-      order['orderId'].toString(),
-    );
-
-    if (order['_id'] != null) {
-      await prefs.setString(
-        'razorpay_mongo_id',
-        order['_id'].toString(),
-      );
-    }
-
-    await prefs.setString(
-      'razorpay_razorpay_order_id',
-      razorpayOrderId,
-    );
-
-    // -------------------------------------------------------
-    // Initialize Razorpay
-    // -------------------------------------------------------
-
-    if (_razorpay == null) {
-      _razorpay = Razorpay();
-
-      _razorpay!.on(
-        Razorpay.EVENT_PAYMENT_SUCCESS,
-        _handlePaymentSuccess,
-      );
-
-      _razorpay!.on(
-        Razorpay.EVENT_PAYMENT_ERROR,
-        _handlePaymentError,
-      );
-
-      _razorpay!.on(
-        Razorpay.EVENT_EXTERNAL_WALLET,
-        _handleExternalWallet,
-      );
-
-      print('✅ Razorpay initialized');
-    }
-
-    // -------------------------------------------------------
-    // STANDARD RAZORPAY OPTIONS
-    // -------------------------------------------------------
-    //
-    // IMPORTANT:
-    // Do NOT add:
-    //   method
-    //   show_payment_methods
-    //   show_upi_apps
-    //   bank_ifsc_code
-    //   bank_name
-    //   modal.ondismiss = "redirect"
-    //   disable_sounds
-    //   disable_animation
-    //
-    // We are intentionally using the standard options.
-    // -------------------------------------------------------
-
-    final options = {
-      'key': key.toString(),
-      'amount': razorpayOrder['amount'],
-      'currency':
-          razorpayOrder['currency'] ?? 'INR',
-      'name': 'MeenavanFresh',
-      'description':
-          'Order ${order['orderId']}',
-      'order_id': razorpayOrderId,
-
- 'prefill': {
-  'contact': '+91${_phoneController.text.trim()}',
-  'email': _emailController.text.trim(),
-},
-
-      'theme': {
-        'color': '#5E0006',
-      },
-
-      'notes': {
-        'orderId':
-            order['orderId'].toString(),
-        'mongoId':
-            order['_id']?.toString() ?? '',
-        'type': 'checkout',
-      },
-    };
-
-    // -------------------------------------------------------
-    // Debug logs
-    // -------------------------------------------------------
-
-    print('');
-    print('======================================');
-    print('🔵 OPENING RAZORPAY');
-    print('======================================');
-    print('Key: ${key.toString()}');
-    print('Razorpay Order ID: $razorpayOrderId');
-    print(
-      'Amount: ${razorpayOrder['amount']}',
-    );
-    print(
-      'Currency: ${razorpayOrder['currency'] ?? 'INR'}',
-    );
-    print(
-      'Customer Phone: ${_phoneController.text.trim()}',
-    );
-    print(
-      'Customer Email: ${_emailController.text.trim()}',
-    );
-    print('======================================');
-    print('');
-
-    // -------------------------------------------------------
-    // Open Razorpay
-    // -------------------------------------------------------
-
-    _razorpay!.open(options);
-  } catch (e, stackTrace) {
-    print('');
-    print('======================================');
-    print('❌ PAYMENT INITIALIZATION ERROR');
-    print('======================================');
-    print('Error: $e');
-    print('StackTrace: $stackTrace');
-    print('======================================');
-    print('');
-
-    if (mounted) {
+    
+    if (token == null) {
       setState(() {
-        _errorMessage =
-            'Failed to initialize payment: $e';
+        _errorMessage = 'Please login to continue';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiService.baseUrl}/payments/create-order'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'orderId': order['orderId']}),
+      );
+      
+      final data = jsonDecode(response.body);
+      
+      if (data['success'] != true) {
+        throw Exception(data['message'] ?? 'Failed to create payment order');
+      }
+      
+      final razorpayOrder = data['order'];
+      final key = data['key'];
+      
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('razorpay_order_id', order['orderId']);
+      
+      var options = {
+        'key': key,
+        'amount': razorpayOrder['amount'],
+        'currency': razorpayOrder['currency'] ?? 'INR',
+        'name': 'MeenavanFresh',
+        'description': 'Order ${order['orderId']}',
+        'order_id': razorpayOrder['id'],
+        'prefill': {
+          'contact': _phoneController.text.trim(),
+          'email': _emailController.text.trim(),
+        },
+        'theme': {
+          'color': '#D53E0F'
+        }
+      };
+      
+      _razorpay?.open(options);
+      
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to initialize payment: $e';
         _isLoading = false;
       });
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {

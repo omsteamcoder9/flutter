@@ -1,66 +1,60 @@
 // lib/services/razorpay_service.dart
-import 'package:custom_tabs/custom_tabs.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'api_service.dart';
+
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class RazorpayService {
-  static Future<bool> startPayment({
-    required String orderId,
+  final Razorpay _razorpay = Razorpay();
+
+  void initialize({
+    required Function(PaymentSuccessResponse) onSuccess,
+    required Function(PaymentFailureResponse) onError,
+    required Function(ExternalWalletResponse) onExternalWallet,
+  }) {
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, onSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, onError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, onExternalWallet);
+  }
+
+  void openPayment({
+    required String razorpayKey,
+    required String razorpayOrderId,
     required double amount,
     required String name,
     required String email,
     required String phone,
-    required String token,
-  }) async {
+    String description = 'MeenavanFresh Order',
+  }) {
+    final options = {
+      'key': razorpayKey,
+      'amount': (amount * 100).round(),
+      'currency': 'INR',
+      'name': 'MeenavanFresh',
+      'description': description,
+      'order_id': razorpayOrderId,
+      'prefill': {
+        'name': name,
+        'email': email,
+        'contact': phone,
+      },
+      'theme': {
+        'color': '#5E0006',
+      },
+      'retry': {
+        'enabled': true,
+        'max_count': 2,
+      },
+      'send_sms_hash': true,
+    };
+
     try {
-      // Step 1: Create Razorpay order
-      final createOrderUrl = '${ApiService.baseUrl}/payments/create-order';
-      final createResponse = await http.post(
-        Uri.parse(createOrderUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'orderId': orderId}),
-      );
-
-      final createData = jsonDecode(createResponse.body);
-      
-      if (createData['success'] != true) {
-        return false;
-      }
-
-      final razorpayKey = createData['key'];
-      final razorpayOrder = createData['order'];
-
-      // Step 2: Build Razorpay checkout URL
-      final paymentUrl = Uri.parse(
-        'https://checkout.razorpay.com/v1/checkout.js'
-      );
-
-      // Step 3: Open in Chrome Custom Tab
-      final success = await CustomTabs.launch(
-        paymentUrl,
-        customTabsOption: CustomTabsOption(
-          toolbarColor: const Color(0xFF5E0006),
-          enableDefaultShare: false,
-          instantAppsEnabled: true,
-          showTitle: true,
-          urlBarHidingEnabled: true,
-        ),
-        safariVCOption: SafariVCOption(
-          barCollapsingEnabled: true,
-          preferredBarTintColor: const Color(0xFF5E0006),
-          preferredControlTintColor: Colors.white,
-        ),
-      );
-
-      return success;
+      _razorpay.open(options);
     } catch (e) {
-      print('Razorpay service error: $e');
-      return false;
+      print('RAZORPAY OPEN ERROR: $e');
+      rethrow;
     }
+  }
+
+  void dispose() {
+    _razorpay.clear();
   }
 }
