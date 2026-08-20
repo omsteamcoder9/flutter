@@ -303,77 +303,81 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void _onSearchSubmit() {}
   void _onSearchQueryChanged(String query) {}
 
-  // ✅ FIXED: Reusable add to cart method for any product
+  // ✅ FIXED: NO INFINITE LOOP - Same as HomeScreen
   Future<void> _addToCartProduct(dynamic product) async {
     if (_isOutOfStock()) return;
 
+    // STEP 1: Optimistic Update
+    _cartProvider.addItemLocally(product);
     setState(() {
-      _isAddingToCart = true;
+      _showAddedMessage = true;
     });
 
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Added to cart!'),
+        duration: Duration(seconds: 1),
+        backgroundColor: Color(0xFF9B0F06),
+      ),
+    );
+
+    if (widget.onCartUpdate != null) {
+      widget.onCartUpdate!();
+    }
+
+    // STEP 2: API call in background
     try {
       String variantId = '';
       if (product['variants'] != null && product['variants'].isNotEmpty) {
         variantId = product['variants'][0]['_id'] ?? '';
       }
       
-      // Use product's price if available, otherwise use selected variant price
       double price = product['price'] ?? _getCurrentPrice();
       
       final response = await ApiService.addToCart(
         product['_id'],
-        1,  // Default quantity for related products
+        1,
         variantId,
         guestId: _guestId,
         token: _authToken,
       );
 
       if (response['success'] == true) {
-        setState(() {
-          _showAddedMessage = true;
-        });
-
-        await _refreshCartCount();
-        if (_cartProvider != null) {
-          await _cartProvider.refreshCartCount();
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Added to cart!'),
-            duration: Duration(seconds: 1),
-            backgroundColor: Color(0xFF9B0F06),
-          ),
-        );
-
+        // ✅ FIXED: Only refresh CartProvider - REMOVED _refreshCartCount()
+        await _cartProvider.refreshCartCount();
+        
         if (widget.onCartUpdate != null) {
           widget.onCartUpdate!();
         }
-
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            setState(() {
-              _showAddedMessage = false;
-            });
-          }
-        });
       } else {
         throw Exception(response['message'] ?? 'Failed to add to cart');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
+      // STEP 3: Revert if failed
+      _cartProvider.removeItemLocally(product);
       if (mounted) {
         setState(() {
-          _isAddingToCart = false;
+          _showAddedMessage = false;
         });
       }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
+
+    // Hide "Added!" message after 2 seconds
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _showAddedMessage = false;
+        });
+      }
+    });
   }
 
   Future<void> _addToCart() async {
@@ -847,34 +851,45 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Widget _buildActionButtons(bool isOutOfStock) {
+    final bool isInCart = _cartProvider.cartProductIds.contains(_product?['_id']);
+    
     return Row(
       children: [
         Expanded(
           child: GestureDetector(
-            onTap: isOutOfStock ? null : _addToCart,
+            onTap: (isOutOfStock || isInCart) ? null : _addToCart,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
-                color: isOutOfStock ? Colors.grey.shade400 : const Color(0xFF9B0F06),
+                color: isOutOfStock 
+                    ? Colors.grey.shade400 
+                    : (isInCart ? const Color(0xFF9B0F06) : const Color(0xFF9B0F06)),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Center(
-                child: _isAddingToCart
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : (_showAddedMessage
-                        ? const Text(
-                            'Added! ✓',
+                child: isInCart
+                    ? const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check, color: Colors.white, size: 16),
+                          SizedBox(width: 6),
+                          Text(
+                            'In Cart ✓',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      )
+                    : (_isAddingToCart
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
                             ),
                           )
                         : Row(
@@ -1052,7 +1067,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  // ✅ FIXED: Related Products with working Add to Cart
   Widget _buildRelatedProductsSection(Set<String> cartProductIds) {
     return Column(
       children: [
@@ -1080,7 +1094,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 4),
                 child: ProductCard(
                   product: product,
-                  onAddToCart: () => _addToCartProduct(product), // ✅ FIXED
+                  onAddToCart: () => _addToCartProduct(product),
                   guestId: _guestId,
                   token: _authProvider.isLoggedIn ? _authProvider.token : null,
                   onCartUpdate: () {

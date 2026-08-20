@@ -236,40 +236,59 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _addToCart(dynamic product) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('buy_now_order');
-      await prefs.remove('pending_checkout');
-      
-      await _cartProvider.addToCart(
-        product,
-        guestId: _guestId,
-        token: _authProvider.isLoggedIn ? _authProvider.token : null,
-        isLoggedIn: _authProvider.isLoggedIn,
-      );
-      
-      if (mounted) {
-        setState(() {});
-      }
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${product['name']} added to cart'),
-          duration: Duration(seconds: 1),
-          backgroundColor: Color(0xFF9B0F06),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to add to cart'),
-          duration: Duration(seconds: 1),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+void _addToCart(dynamic product) async {
+  // ✅ STEP 1: OPTIMISTIC UPDATE - Update UI IMMEDIATELY
+  final productId = product['_id'];
+  
+  // Add to cart provider locally (instant)
+  _cartProvider.addItemLocally(product);
+  
+  // Update UI instantly
+  if (mounted) {
+    setState(() {});
   }
+  
+  // Show snackbar instantly
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('${product['name']} added to cart'),
+      duration: const Duration(seconds: 1),
+      backgroundColor: const Color(0xFF9B0F06),
+    ),
+  );
+  
+  // ✅ STEP 2: SEND API REQUEST IN BACKGROUND
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('buy_now_order');
+    await prefs.remove('pending_checkout');
+    
+    await _cartProvider.addToCart(
+      product,
+      guestId: _guestId,
+      token: _authProvider.isLoggedIn ? _authProvider.token : null,
+      isLoggedIn: _authProvider.isLoggedIn,
+    );
+    
+    // ✅ STEP 3: CONFIRM - Keep as is (already showing "In Cart")
+    // Just refresh count to be safe
+    _cartProvider.refreshCartCount();
+    
+  } catch (e) {
+    // ❌ STEP 4: REVERT IF FAILED
+    _cartProvider.removeItemLocally(product);
+    if (mounted) {
+      setState(() {});
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Failed to add to cart'),
+        duration: Duration(seconds: 1),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
 
   void _showAuthDialog() {
     if (_authProvider.isLoggedIn) {

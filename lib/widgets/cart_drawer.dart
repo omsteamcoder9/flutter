@@ -60,57 +60,67 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  Future<void> _updateQuantity(String itemId, int quantity) async {
-    if (quantity < 1) return;
-    setState(() {
-      _removingItems.add(itemId);
-    });
-    try {
-      await ApiService.updateCartItem(itemId, quantity, guestId: widget.guestId, token: widget.token);
-      await _loadCart();
-      widget.onCartUpdate();
-    } catch (e) {
-      print('Error updating quantity: $e');
-    } finally {
-      setState(() {
-        _removingItems.remove(itemId);
-      });
-    }
-  }
-
-  Future<void> _removeItem(String itemId) async {
-    setState(() {
-      _removingItems.add(itemId);
-    });
-    try {
-      await ApiService.removeCartItem(itemId, guestId: widget.guestId, token: widget.token);
-      await _loadCart();
-      widget.onCartUpdate();
-    } catch (e) {
-      print('Error removing item: $e');
-    } finally {
-      setState(() {
-        _removingItems.remove(itemId);
-      });
-    }
-  }
-
-  Future<void> _clearCart() async {
-    try {
-      print('🔵 _clearCart called');
-      print('   - widget.guestId: ${widget.guestId}');
-      print('   - widget.token: ${widget.token}');
-      
-      final response = await ApiService.clearCart(guestId: widget.guestId, token: widget.token);
-      print('   - Response: $response');
-      
-      await _loadCart();
-      widget.onCartUpdate();
-    } catch (e) {
-      print('Error clearing cart: $e');
-    }
-  }
+Future<void> _updateQuantity(String itemId, int quantity) async {
+  if (quantity < 1) return;
   
+  // ✅ Update UI instantly
+  setState(() {
+    final itemIndex = _cart['items'].indexWhere((item) => item['_id'] == itemId);
+    if (itemIndex != -1) {
+      final item = _cart['items'][itemIndex];
+      final oldQty = item['quantity'];
+      final price = item['price'];
+      
+      item['quantity'] = quantity;
+      _cart['totalItems'] = (_cart['totalItems'] ?? 0) - oldQty + quantity;
+      _cart['totalPrice'] = (_cart['totalPrice'] ?? 0) - (price * oldQty) + (price * quantity);
+    }
+  });
+  widget.onCartUpdate();
+  
+  // ✅ Send API in background
+  try {
+    await ApiService.updateCartItem(itemId, quantity, guestId: widget.guestId, token: widget.token);
+    widget.onCartUpdate();
+  } catch (e) {
+    _loadCart();
+    widget.onCartUpdate();
+  }
+}
+Future<void> _removeItem(String itemId) async {
+  // ✅ Update UI instantly
+  setState(() {
+    _cart['items'] = _cart['items'].where((item) => item['_id'] != itemId).toList();
+    _cart['totalItems'] = (_cart['totalItems'] ?? 0) - 1;
+  });
+  widget.onCartUpdate();
+  
+  // ✅ Send API in background
+  try {
+    await ApiService.removeCartItem(itemId, guestId: widget.guestId, token: widget.token);
+    widget.onCartUpdate();
+  } catch (e) {
+    _loadCart();
+    widget.onCartUpdate();
+  }
+}
+
+Future<void> _clearCart() async {
+  // ✅ Update UI instantly
+  setState(() {
+    _cart = {'items': [], 'totalItems': 0, 'totalPrice': 0};
+  });
+  widget.onCartUpdate();
+  
+  // ✅ Send API in background
+  try {
+    await ApiService.clearCart(guestId: widget.guestId, token: widget.token);
+    widget.onCartUpdate();
+  } catch (e) {
+    _loadCart();
+    widget.onCartUpdate();
+  }
+} 
   String _formatPrice(double price) {
     return '₹${price.toStringAsFixed(0)}';
   }

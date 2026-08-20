@@ -18,12 +18,28 @@ class CartProvider extends ChangeNotifier {
     _isLoggedIn = isLoggedIn;
   }
 
-  // ✅ ADD THIS METHOD
   void resetToGuest(String guestId) {
     _guestId = guestId;
     _token = null;
     _isLoggedIn = false;
     refreshCartCount();
+  }
+
+  void addItemLocally(dynamic product) {
+    final productId = product['_id'];
+    if (!_cartProductIds.contains(productId)) {
+      _cartProductIds.add(productId);
+      _cartCount++;
+    }
+  }
+
+  void removeItemLocally(dynamic product) {
+    final productId = product['_id'];
+    if (_cartProductIds.contains(productId)) {
+      _cartProductIds.remove(productId);
+      _cartCount--;
+      if (_cartCount < 0) _cartCount = 0;
+    }
   }
 
   Future<void> refreshCartCount() async {
@@ -58,6 +74,7 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
+  // ✅ FIXED: NO refreshCartCount() here
   Future<void> addToCart(dynamic product, {required String guestId, String? token, bool isLoggedIn = false}) async {
     try {
       String? guestIdToUse = isLoggedIn ? null : guestId;
@@ -77,7 +94,8 @@ class CartProvider extends ChangeNotifier {
       );
       
       if (response['success'] == true) {
-        await refreshCartCount();
+        // ✅ REMOVED: await refreshCartCount();
+        // The caller will handle refreshing
       }
     } catch (e) {
       print('Error adding to cart: $e');

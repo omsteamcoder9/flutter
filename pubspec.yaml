@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  razorpay_flutter: ^1.4.5     
   cupertino_icons: ^1.0.8
   http: ^1.6.0
   flutter_dotenv: ^6.0.1
@@ -25,7 +26,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  flutter_launcher_icons: ^0.13.1   # ✅ ADDED
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
@@ -34,7 +35,7 @@ flutter:
     - .env
     - assets/images/
 
-flutter_icons:                        # ✅ ADDED
+flutter_icons:
   android: true
   ios: false
   image_path: "assets/images/logo.jpg"

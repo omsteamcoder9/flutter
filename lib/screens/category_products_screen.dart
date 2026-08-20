@@ -93,36 +93,47 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     }
   }
 
-  Future<void> _addToCart(dynamic product) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('buy_now_order');
-      await prefs.remove('pending_checkout');
-      
-      await _cartProvider.addToCart(
-        product,
-        guestId: _guestId,
-        token: _authProvider.isLoggedIn ? _authProvider.token : null,
-        isLoggedIn: _authProvider.isLoggedIn,
-      );
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${product['name']} added to cart'),
-          duration: const Duration(seconds: 1),
-          backgroundColor: const Color(0xFF9B0F06),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to add to cart'),
-          duration: const Duration(seconds: 1),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+Future<void> _addToCart(dynamic product) async {
+  // ✅ STEP 1: Update UI IMMEDIATELY
+  _cartProvider.addItemLocally(product);
+  setState(() {});
+  
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('${product['name']} added to cart'),
+      duration: const Duration(seconds: 1),
+      backgroundColor: const Color(0xFF9B0F06),
+    ),
+  );
+  
+  // ✅ STEP 2: Send API in background
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('buy_now_order');
+    await prefs.remove('pending_checkout');
+    
+    await _cartProvider.addToCart(
+      product,
+      guestId: _guestId,
+      token: _authProvider.isLoggedIn ? _authProvider.token : null,
+      isLoggedIn: _authProvider.isLoggedIn,
+    );
+    
+    _cartProvider.refreshCartCount();
+    
+  } catch (e) {
+    // ❌ STEP 3: Revert if failed
+    _cartProvider.removeItemLocally(product);
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to add to cart'),
+        duration: const Duration(seconds: 1),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
 
   void _openCart() {
     String? guestIdToUse = _authProvider.isLoggedIn ? null : _guestId;

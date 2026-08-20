@@ -12,6 +12,7 @@ import '../widgets/bottom_nav_bar.dart';
 import '../widgets/cart_drawer.dart';
 import 'auth/signup_screen.dart';
 import 'profile/profile_screen.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final String? guestId;
@@ -30,7 +31,6 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
   
-  // Shipping Address Controllers
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
@@ -44,22 +44,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   
-  // Cart data
   Map<String, dynamic> _cart = {'items': [], 'totalItems': 0, 'totalPrice': 0};
-  
-  // Buy Now state
   Map<String, dynamic>? _buyNowItem;
   bool _isBuyNowMode = false;
   
   int _currentIndex = 1;
   int _cartCount = 0;
 
-  // ========== WARD STATE ==========
   List<Map<String, dynamic>> _wards = [];
   int? _selectedWardId;
   List<String> _streetsForSelectedWard = [];
   String? _selectedStreet;
   bool _loadingWards = false;
+
+  Razorpay? _razorpay;
+  Map<String, dynamic>? _pendingOrder;
+  bool _paymentHandled = false;
 
   @override
   void initState() {
@@ -68,9 +68,152 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _loadCartData();
     _loadCartCount();
     _loadWards();
+    
+    _razorpay = Razorpay();
+    _razorpay?.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay?.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay?.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
   }
 
-  // ========== LOAD WARDS ==========
+  Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    if (_paymentHandled) {
+      print('⚠️ Payment success callback already handled. Ignoring duplicate callback.');
+      return;
+    }
+
+    _paymentHandled = true;
+
+    print('✅ RAZORPAY PAYMENT SUCCESS');
+    print('Razorpay Order ID: ${response.orderId}');
+    print('Razorpay Payment ID: ${response.paymentId}');
+    print('Razorpay Signature: ${response.signature}');
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // IMPORTANT:
+      // response.orderId is the Razorpay order_xxx ID.
+      // It MUST be sent to the backend together with payment ID + signature.
+      final razorpayOrderId = response.orderId;
+      final razorpayPaymentId = response.paymentId;
+      final razorpaySignature = response.signature;
+
+      if (razorpayOrderId == null ||
+          razorpayOrderId.isEmpty ||
+          razorpayPaymentId == null ||
+          razorpayPaymentId.isEmpty ||
+          razorpaySignature == null ||
+          razorpaySignature.isEmpty) {
+        throw Exception('Payment succeeded but Razorpay verification data is missing.');
+      }
+
+      print('🔐 Verifying payment with backend...');
+
+      // Do NOT call getOrderById() here.
+      // The backend verification response already confirms the payment and
+      // returns the order information needed by the success screen.
+      final verificationResponse = await ApiService.verifyPayment({
+        'razorpay_order_id': razorpayOrderId,
+        'razorpay_payment_id': razorpayPaymentId,
+        'razorpay_signature': razorpaySignature,
+      });
+
+      print('🔐 Verification response: $verificationResponse');
+
+      if (verificationResponse is! Map<String, dynamic> ||
+          verificationResponse['success'] != true) {
+        final message = verificationResponse is Map
+            ? (verificationResponse['message'] ?? 'Payment verification failed.')
+            : 'Payment verification failed.';
+        throw Exception(message.toString());
+      }
+
+      final verifiedOrderRaw = verificationResponse['order'];
+
+      if (verifiedOrderRaw is! Map) {
+        throw Exception('Payment verified, but order details were not returned by the server.');
+      }
+
+      // Keep the original order data (products/address/etc.) and overwrite
+      // payment/order status with the verified values from the backend.
+      final successOrder = <String, dynamic>{};
+
+      if (_pendingOrder != null) {
+        successOrder.addAll(_pendingOrder!);
+      }
+
+      successOrder.addAll(
+        Map<String, dynamic>.from(verifiedOrderRaw),
+      );
+
+      final verifiedOrderId =
+          successOrder['orderId']?.toString() ?? _pendingOrder?['orderId']?.toString();
+
+      if (verifiedOrderId == null || verifiedOrderId.isEmpty) {
+        throw Exception('Payment verified, but order ID is missing.');
+      }
+
+      // Payment is now confirmed by the backend. Only NOW navigate to the
+      // success screen. There is no second blocking order request.
+      print('✅ PAYMENT VERIFIED SUCCESSFULLY');
+      print('✅ Order ID: $verifiedOrderId');
+      print('✅ Payment status: ${successOrder['paymentStatus']}');
+      print('✅ Order status: ${successOrder['orderStatus']}');
+
+      widget.onOrderPlaced();
+
+      final authProviderRefresh =
+          Provider.of<AuthProvider>(context, listen: false);
+      if (authProviderRefresh.isLoggedIn) {
+        authProviderRefresh.notifyListeners();
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OrderSuccessScreen(
+            orderId: verifiedOrderId,
+            orderData: successOrder,
+          ),
+        ),
+      );
+    } catch (e) {
+      print('❌ PAYMENT VERIFICATION ERROR: $e');
+
+      _paymentHandled = false;
+
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    print('❌ PAYMENT ERROR: ${response.message}');
+    setState(() {
+      _errorMessage = 'Payment failed: ${response.message ?? 'Please try again.'}';
+      _isLoading = false;
+    });
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    print('🔵 EXTERNAL WALLET: ${response.walletName}');
+  }
+
   Future<void> _loadWards() async {
     setState(() => _loadingWards = true);
     try {
@@ -166,6 +309,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _stateController.dispose();
     _postalCodeController.dispose();
     _countryController.dispose();
+    _razorpay?.clear();
     super.dispose();
   }
 
@@ -402,6 +546,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           );
         }
       } else {
+        // Keep the complete order locally so the success screen can open
+        // immediately after backend payment verification without calling
+        // GET /orders/:id again.
+        _pendingOrder = Map<String, dynamic>.from(order);
+        _paymentHandled = false;
+
         await _openRazorpayPayment(order);
       }
     } catch (e) {
@@ -424,93 +574,49 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    final paymentUrl = '${ApiService.baseUrl}/payment-page/${order['orderId']}';
-    final uri = Uri.parse(paymentUrl);
-    
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    
-    if (!launched) {
-      setState(() {
-        _errorMessage = 'Failed to open payment gateway';
-        _isLoading = false;
-      });
-    } else {
-      await _checkPaymentAfterReturn(order['orderId']);
-    }
-  }
-
-  Future<void> _checkPaymentAfterReturn(String orderId) async {
-    print('🔵 _checkPaymentAfterReturn START for order: $orderId');
-    
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-    
-    await Future.delayed(const Duration(seconds: 3));
-    
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiService.baseUrl}/payments/create-order'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'orderId': order['orderId']}),
       );
-    }
-    
-    bool paymentCompleted = false;
-    
-    for (int i = 0; i < 30; i++) {
-      await Future.delayed(const Duration(seconds: 2));
-      print('🔵 Checking payment status attempt ${i+1}...');
       
-      try {
-        final response = await http.get(
-          Uri.parse('${ApiService.baseUrl}/payments/status/$orderId'),
-          headers: {
-            'Content-Type': 'application/json',
-            if (token != null) 'Authorization': 'Bearer $token',
-          },
-        );
-        
-        final data = jsonDecode(response.body);
-        print('🔵 Payment status response: $data');
-        
-        if (data['success'] && data['payment']['status'] == 'paid') {
-          paymentCompleted = true;
-          print('🔵 Payment COMPLETED!');
-          break;
+      final data = jsonDecode(response.body);
+      
+      if (data['success'] != true) {
+        throw Exception(data['message'] ?? 'Failed to create payment order');
+      }
+      
+      final razorpayOrder = data['order'];
+      final key = data['key'];
+      
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('razorpay_order_id', order['orderId']);
+      
+      var options = {
+        'key': key,
+        'amount': razorpayOrder['amount'],
+        'currency': razorpayOrder['currency'] ?? 'INR',
+        'name': 'MeenavanFresh',
+        'description': 'Order ${order['orderId']}',
+        'order_id': razorpayOrder['id'],
+        'prefill': {
+          'contact': _phoneController.text.trim(),
+          'email': _emailController.text.trim(),
+        },
+        'theme': {
+          'color': '#D53E0F'
         }
-      } catch (e) {
-        print('🔵 Verification attempt $i failed: $e');
-      }
-    }
-    
-    if (mounted) {
-      Navigator.pop(context);
-    }
-    
-    if (paymentCompleted && mounted) {
-      print('🔵 NAVIGATING TO ORDER SUCCESS SCREEN');
-      widget.onOrderPlaced();
+      };
       
-      final authProviderRefresh = Provider.of<AuthProvider>(context, listen: false);
-      if (authProviderRefresh.isLoggedIn) {
-        authProviderRefresh.notifyListeners();
-      }
+      _razorpay?.open(options);
       
-      final fullOrder = await ApiService.getOrderById(orderId);
-      
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => OrderSuccessScreen(
-            orderId: orderId,
-            orderData: fullOrder,
-          ),
-        ),
-      );
-    } else if (mounted) {
-      print('🔵 PAYMENT NOT COMPLETED');
+    } catch (e) {
       setState(() {
-        _errorMessage = 'Payment not completed. Please try again.';
+        _errorMessage = 'Failed to initialize payment: $e';
         _isLoading = false;
       });
     }
@@ -567,7 +673,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                 ),
               
-              // Order Summary Section
               Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(16),
@@ -682,7 +787,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ),
               
-              // Shipping Address Section
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -708,7 +812,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     _buildTextField(_emailController, 'Email Address', Icons.email, keyboardType: TextInputType.emailAddress),
                     const SizedBox(height: 12),
                     
-                    // ========== WARD DROPDOWN - FIXED OVERFLOW ==========
                     DropdownButtonFormField<int>(
                       value: _selectedWardId,
                       isExpanded: true,
@@ -764,7 +867,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // ========== STREET DROPDOWN - FIXED OVERFLOW ==========
                     DropdownButtonFormField<String>(
                       value: _selectedStreet,
                       isExpanded: true,
@@ -817,7 +919,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // ========== CITY - READ ONLY ==========
                     TextFormField(
                       controller: _cityController,
                       readOnly: true,
@@ -853,7 +954,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
               const SizedBox(height: 24),
 
-              // Payment Method Section
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
