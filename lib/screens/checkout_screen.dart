@@ -159,7 +159,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     try {
       if (verificationResponse?['success'] != true) {
-        throw lastError ?? Exception('Payment verification failed.');
+        debugPrint('⚠️ Normal verification failed. Starting payment recovery...');
+        await _recoverPaymentAfterVerificationFailure(razorpayOrderId);
+        return;
       }
 
       final verifiedOrderRaw = verificationResponse?['order'];
@@ -254,13 +256,137 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  void _handlePaymentError(PaymentFailureResponse response) {
-    print('❌ PAYMENT ERROR: ${response.message}');
-    setState(() {
-      _errorMessage = 'Payment failed: ${response.message ?? 'Please try again.'}';
-      _isLoading = false;
-    });
+  Future<void> _recoverPaymentAfterVerificationFailure(String? razorpayOrderId) async {
+    try {
+      if (razorpayOrderId == null || razorpayOrderId.isEmpty) {
+        throw Exception('Razorpay Order ID is missing for recovery');
+      }
+
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = authProvider.token;
+
+      if (token == null || token.isEmpty) {
+        throw Exception('Authentication token is missing');
+      }
+
+      debugPrint('🔄 PAYMENT RECOVERY STARTED: $razorpayOrderId');
+
+      final response = await http.get(
+        Uri.parse('${ApiService.baseUrl}/orders/razorpay/$razorpayOrderId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      debugPrint('RECOVERY STATUS CODE: ${response.statusCode}');
+      debugPrint('RECOVERY RESPONSE: ${response.body}');
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception('Failed to fetch payment status: ${response.statusCode}');
+      }
+
+      final data = jsonDecode(response.body);
+      if (data['success'] != true) {
+        throw Exception(data['message'] ?? 'Payment status unavailable');
+      }
+
+      final rawOrder = data['order'] ?? data['data'];
+      if (rawOrder is! Map) {
+        throw Exception('Order information was not returned');
+      }
+
+      final recoveredOrder = Map<String, dynamic>.from(rawOrder);
+      final paymentStatus = recoveredOrder['paymentStatus']?.toString().toLowerCase();
+      final orderStatus = recoveredOrder['orderStatus']?.toString().toLowerCase();
+
+      final paymentSuccessful = paymentStatus == 'completed' ||
+          paymentStatus == 'paid' ||
+          paymentStatus == 'captured' ||
+          paymentStatus == 'success';
+
+      final orderConfirmed = orderStatus == 'confirmed' ||
+          orderStatus == 'processing' ||
+          orderStatus == 'shipped' ||
+          orderStatus == 'delivered';
+
+      if (!paymentSuccessful && !orderConfirmed) {
+        throw Exception('Payment is not confirmed yet');
+      }
+
+      final successOrder = <String, dynamic>{};
+      if (_pendingOrder != null) {
+        successOrder.addAll(_pendingOrder!);
+      }
+      successOrder.addAll(recoveredOrder);
+
+      final recoveredOrderId = successOrder['orderId']?.toString() ??
+          _pendingOrder?['orderId']?.toString();
+
+      if (recoveredOrderId == null || recoveredOrderId.isEmpty) {
+        throw Exception('Recovered order ID is missing');
+      }
+
+      debugPrint('✅ PAYMENT RECOVERED: $recoveredOrderId');
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+        _errorMessage = null;
+      });
+
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OrderSuccessScreen(
+            orderId: recoveredOrderId,
+            orderData: successOrder,
+          ),
+        ),
+      );
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          widget.onOrderPlaced();
+        } catch (e) {
+          debugPrint('⚠️ Post-recovery order callback error: $e');
+        }
+      });
+    } catch (e, stackTrace) {
+      debugPrint('❌ PAYMENT RECOVERY FAILED: $e');
+      debugPrint('$stackTrace');
+
+      if (!mounted) return;
+      setState(() {
+        _paymentHandled = false;
+        _isLoading = false;
+        _errorMessage =
+            'Payment may have been completed. Please check My Orders.';
+      });
+    }
   }
+
+void _handlePaymentError(PaymentFailureResponse response) {
+  print('========================================');
+  print('❌ RAZORPAY PAYMENT ERROR');
+  print('CODE: ${response.code}');
+  print('MESSAGE: ${response.message}');
+  print('ERROR: ${response.error}');
+  print('========================================');
+
+  if (!mounted) return;
+
+  setState(() {
+    _isLoading = false;
+    _paymentHandled = false;
+    _errorMessage =
+        'Payment failed: ${response.message ?? 'Unknown Razorpay error'}';
+  });
+}
 
   void _handleExternalWallet(ExternalWalletResponse response) {
     print('🔵 EXTERNAL WALLET: ${response.walletName}');
