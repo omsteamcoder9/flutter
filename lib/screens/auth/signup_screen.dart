@@ -9,6 +9,7 @@ import '../../widgets/bottom_nav_bar.dart';
 import '../../widgets/cart_drawer.dart';
 import '../profile/profile_screen.dart';
 import '../../services/api_service.dart';
+
 class SignupScreen extends StatefulWidget {
   final String? guestId;
 
@@ -22,6 +23,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _phoneController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+  bool _showLoginOption = false;  // ✅ NEW: Show Login button
   int _currentIndex = 2;
   int _cartCount = 0;
 
@@ -52,35 +54,31 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
- void _openCart() async {
-  final authProvider = Provider.of<AuthProvider>(context, listen: false);
-  
-  // ✅ Get guestId from SharedPreferences if widget.guestId is null
-  String? guestId = widget.guestId;
-  if (guestId == null || guestId.isEmpty) {
-    final prefs = await SharedPreferences.getInstance();
-    guestId = prefs.getString('guest_id');
-        print('🆔 Guest ID from SharedPreferences: $guestId');  // ✅ DEBUG
-
-  }
-    print('🆔 Guest ID being used: $guestId');  // ✅ DEBUG
-
-  String? guestIdToUse = authProvider.isLoggedIn ? null : guestId;
-  String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
-  
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => CartScreen(
-        guestId: guestIdToUse,
-        token: tokenToUse,
-        onCartUpdate: () {
-          _loadCartCount();
-        },
+  void _openCart() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    String? guestId = widget.guestId;
+    if (guestId == null || guestId.isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      guestId = prefs.getString('guest_id');
+    }
+    
+    String? guestIdToUse = authProvider.isLoggedIn ? null : guestId;
+    String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CartScreen(
+          guestId: guestIdToUse,
+          token: tokenToUse,
+          onCartUpdate: () {
+            _loadCartCount();
+          },
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   void _showAuthDialog() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -90,8 +88,6 @@ class _SignupScreenState extends State<SignupScreen> {
         context,
         MaterialPageRoute(builder: (context) => const ProfileScreen()),
       );
-    } else {
-      // Already on signup screen
     }
   }
 
@@ -105,80 +101,76 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  Future<void> _sendOtp() async {
-    final phoneNumber = _phoneController.text.trim();
-    
-    if (phoneNumber.isEmpty) {
-      setState(() {
-        _errorMessage = 'Please enter phone number';
-      });
-      return;
-    }
-    
-    if (phoneNumber.length < 10) {
-      setState(() {
-        _errorMessage = 'Please enter valid 10-digit phone number';
-      });
-      return;
-    }
-
+Future<void> _sendOtp() async {
+  final phoneNumber = _phoneController.text.trim();
+  
+  if (phoneNumber.isEmpty) {
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _errorMessage = 'Please enter phone number';
+      _showLoginOption = false;
     });
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final result = await authProvider.sendOtp(phoneNumber);
-
+    return;
+  }
+  
+  if (phoneNumber.length < 10) {
     setState(() {
-      _isLoading = false;
+      _errorMessage = 'Please enter valid 10-digit phone number';
+      _showLoginOption = false;
     });
-
-    if (result['success'] == true) {
-      // Check if user already exists
-      if (result['isNewUser'] == false) {
-        // Account already exists - redirect to login
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Account already exists. Please login.'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 2),
-          ),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => LoginScreen(guestId: widget.guestId),
-          ),
-        );
-        return;
-      }
-      
-      // ✅ Get pending checkout flag
-      final prefs = await SharedPreferences.getInstance();
-      final hasPendingCheckout = prefs.getBool('pending_checkout') ?? false;
-      
-      // New user - proceed with OTP verification
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => OtpVerificationScreen(
-            otpSessionId: result['otpSessionId'],
-            phoneNumber: phoneNumber,
-            isNewUser: true,
-            guestId: widget.guestId,
-            hasPendingCheckout: hasPendingCheckout,
-          ),
-        ),
-      );
-    } else {
-      setState(() {
-        _errorMessage = result['message'];
-      });
-    }
+    return;
   }
 
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+    _showLoginOption = false;
+  });
+
+  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  
+  // ✅ FIX: Use sendSignupOtp for signup
+  final result = await authProvider.sendSignupOtp(phoneNumber);
+
+  setState(() {
+    _isLoading = false;
+  });
+
+  // ✅ Handle response
+  if (result['success'] == true) {
+    // New user or inactive user - proceed with OTP
+    final prefs = await SharedPreferences.getInstance();
+    final hasPendingCheckout = prefs.getBool('pending_checkout') ?? false;
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => OtpVerificationScreen(
+          otpSessionId: result['otpSessionId'],
+          phoneNumber: phoneNumber,
+          isNewUser: result['isNewUser'] ?? true,
+          hasInactiveUser: result['hasInactiveUser'] ?? false,
+          guestId: widget.guestId,
+          hasPendingCheckout: hasPendingCheckout,
+        ),
+      ),
+    );
+  } else if (result['exists'] == true && result['isActive'] == true) {
+    // Account exists and is active - Show "Sign In" button
+    setState(() {
+      _errorMessage = 'Account already exists. Please login.';
+      _showLoginOption = true;
+    });
+  } else {
+    // Other error
+    setState(() {
+      _errorMessage = result['message'] ?? 'Something went wrong';
+      _showLoginOption = false;
+    });
+  }
+}
+
   void _goToLogin() {
+    final phoneNumber = _phoneController.text.trim();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -279,17 +271,81 @@ class _SignupScreenState extends State<SignupScreen> {
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(horizontal: 16),
                         ),
+                        onChanged: (value) {
+                          // ✅ Reset error when user types
+                          if (_errorMessage != null) {
+                            setState(() {
+                              _errorMessage = null;
+                              _showLoginOption = false;
+                            });
+                          }
+                        },
                       ),
                     ),
                   ],
                 ),
               ),
               
+              // ✅ Error Message with "Login" option
               if (_errorMessage != null) ...[
                 const SizedBox(height: 12),
-                Text(
-                  _errorMessage!,
-                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _showLoginOption ? Colors.orange.shade50 : Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _showLoginOption ? Colors.orange.shade200 : Colors.red.shade200,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            _showLoginOption ? Icons.info_outline : Icons.error_outline,
+                            color: _showLoginOption ? Colors.orange : Colors.red,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: TextStyle(
+                                color: _showLoginOption ? Colors.orange.shade700 : Colors.red.shade700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      // ✅ Show "Login" button when account exists
+                      if (_showLoginOption) ...[
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _goToLogin,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF9B0F06),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Sign In',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ],
               
@@ -348,30 +404,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ],
               ),
-              
-              const SizedBox(height: 48),
-              
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildFooterLink(''),
-                  const SizedBox(width: 24),
-                  _buildFooterLink(''),
-                ],
-              ),
-              
-              const SizedBox(height: 24),
-              
-              const Center(
-                child: Text(
-                  '',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF5E0006),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -391,20 +423,6 @@ class _SignupScreenState extends State<SignupScreen> {
             _currentIndex = index;
           });
         },
-      ),
-    );
-  }
-
-  Widget _buildFooterLink(String title) {
-    return GestureDetector(
-      onTap: () {},
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 12,
-          color: Colors.grey,
-          fontWeight: FontWeight.w500,
-        ),
       ),
     );
   }

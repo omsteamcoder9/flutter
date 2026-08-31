@@ -87,8 +87,6 @@ class _LoginScreenState extends State<LoginScreen> {
         context,
         MaterialPageRoute(builder: (context) => const ProfileScreen()),
       );
-    } else {
-      // Already on login screen
     }
   }
 
@@ -114,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
     
     if (phoneNumber.length < 10) {
       setState(() {
-        _errorMessage = 'Please enter valid phone number';
+        _errorMessage = 'Please enter valid 10-digit phone number';
       });
       return;
     }
@@ -131,7 +129,9 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = false;
     });
 
-    if (result['success'] == true) {
+    // ✅ Check if user exists
+    if (result['success'] == true && result['exists'] == true) {
+      // ✅ User exists - proceed with OTP verification
       final prefs = await SharedPreferences.getInstance();
       final hasPendingCheckout = prefs.getBool('pending_checkout') ?? false;
       
@@ -141,24 +141,48 @@ class _LoginScreenState extends State<LoginScreen> {
           builder: (context) => OtpVerificationScreen(
             otpSessionId: result['otpSessionId'],
             phoneNumber: phoneNumber,
-            isNewUser: result['isNewUser'],
+            isNewUser: result['isNewUser'] ?? false,
             guestId: widget.guestId,
             hasPendingCheckout: hasPendingCheckout,
           ),
         ),
       );
+    } else if (result['exists'] == false) {
+      // ✅ User not found - Auto redirect to Signup
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No account found. Redirecting to Signup...'),
+          duration: Duration(seconds: 1),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      
+      Future.delayed(const Duration(milliseconds: 800), () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SignupScreen(
+              guestId: widget.guestId,
+            ),
+          ),
+        );
+      });
     } else {
+      // Other error
       setState(() {
-        _errorMessage = result['message'];
+        _errorMessage = result['message'] ?? 'Something went wrong';
       });
     }
   }
 
   void _goToSignup() {
+    final phoneNumber = _phoneController.text.trim();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => SignupScreen(guestId: widget.guestId),
+        builder: (context) => SignupScreen(
+          guestId: widget.guestId,
+        ),
       ),
     );
   }
@@ -255,22 +279,55 @@ class _LoginScreenState extends State<LoginScreen> {
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(horizontal: 16),
                         ),
+                        onChanged: (value) {
+                          // ✅ Reset error when user types
+                          if (_errorMessage != null) {
+                            setState(() {
+                              _errorMessage = null;
+                            });
+                          }
+                        },
                       ),
                     ),
                   ],
                 ),
               ),
               
+              // ✅ Error Message
               if (_errorMessage != null) ...[
                 const SizedBox(height: 12),
-                Text(
-                  _errorMessage!,
-                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
               
               const SizedBox(height: 32),
               
+              // ✅ Continue Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -326,28 +383,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               
               const SizedBox(height: 32),
-              
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildFooterLink(''),
-                  const SizedBox(width: 24),
-                  _buildFooterLink(''),
-                ],
-              ),
-              
-              const SizedBox(height: 24),
-              
-              const Center(
-                child: Text(
-                  '',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF5E0006),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -367,20 +402,6 @@ class _LoginScreenState extends State<LoginScreen> {
             _currentIndex = index;
           });
         },
-      ),
-    );
-  }
-
-  Widget _buildFooterLink(String title) {
-    return GestureDetector(
-      onTap: () {},
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 12,
-          color: Colors.grey,
-          fontWeight: FontWeight.w500,
-        ),
       ),
     );
   }

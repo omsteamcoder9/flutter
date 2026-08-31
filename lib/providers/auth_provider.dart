@@ -70,19 +70,106 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> sendOtp(String phoneNumber) async {
-    print('🔵 sendOtp called for: $phoneNumber');
-    _isLoading = true;
-    notifyListeners();
+// In auth_provider.dart
 
+// ✅ FIXED: sendOtp with proper exists handling
+Future<Map<String, dynamic>> sendOtp(String phoneNumber) async {
+  print('🔵 sendOtp called for: $phoneNumber');
+  _isLoading = true;
+  notifyListeners();
+
+  try {
     final result = await AuthService.sendOtp(phoneNumber);
-    print('📦 sendOtp result: $result');
+    print('📦 sendOtp raw result: $result');
     
+    // ✅ Check if the response has 'exists' flag
+    if (result['success'] == true && result['exists'] == true) {
+      // User exists - OTP sent successfully
+      return {
+        'success': true,
+        'exists': true,
+        'otpSessionId': result['otpSessionId'],
+        'isNewUser': result['isNewUser'] ?? false,
+        'message': result['message'] ?? 'OTP sent successfully',
+      };
+    } else if (result['exists'] == false) {
+      // ✅ User not found - NO OTP sent
+      return {
+        'success': false,
+        'exists': false,
+        'message': result['message'] ?? 'No account found with this phone number',
+      };
+    } else {
+      // Other error
+      return {
+        'success': false,
+        'exists': false,
+        'message': result['message'] ?? 'Failed to send OTP',
+      };
+    }
+  } catch (e) {
+    print('❌ Error sending OTP: $e');
+    return {
+      'success': false,
+      'exists': false,
+      'message': 'Network error. Please try again.',
+    };
+  } finally {
     _isLoading = false;
     notifyListeners();
-    
-    return result;
   }
+}
+
+// ✅ NEW: sendSignupOtp for signup screen
+Future<Map<String, dynamic>> sendSignupOtp(String phoneNumber) async {
+  print('🔵 sendSignupOtp called for: $phoneNumber');
+  _isLoading = true;
+  notifyListeners();
+
+  try {
+    final result = await AuthService.sendSignupOtp(phoneNumber);
+    print('📦 sendSignupOtp raw result: $result');
+    
+    // ✅ If user exists and is active - redirect to login
+    if (result['exists'] == true && result['isActive'] == true) {
+      return {
+        'success': false,
+        'exists': true,
+        'isActive': true,
+        'message': result['message'] ?? 'Account already exists. Please login.',
+      };
+    }
+    
+    // New user or inactive user - OTP sent
+    if (result['success'] == true) {
+      return {
+        'success': true,
+        'exists': false,
+        'isActive': false,
+        'otpSessionId': result['otpSessionId'],
+        'isNewUser': result['isNewUser'] ?? true,
+        'hasInactiveUser': result['hasInactiveUser'] ?? false,
+        'message': result['message'] ?? 'OTP sent successfully',
+      };
+    } else {
+      return {
+        'success': false,
+        'exists': false,
+        'message': result['message'] ?? 'Failed to send OTP',
+      };
+    }
+  } catch (e) {
+    print('❌ Error sending signup OTP: $e');
+    return {
+      'success': false,
+      'exists': false,
+      'message': 'Network error. Please try again.',
+    };
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
 
   Future<Map<String, dynamic>> verifyOtp(String otpSessionId, String otpCode, {String? guestId}) async {
     print('🔵 verifyOtp START');

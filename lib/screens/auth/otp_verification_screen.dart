@@ -3,22 +3,23 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../checkout_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 class OtpVerificationScreen extends StatefulWidget {
   final String otpSessionId;
   final String phoneNumber;
   final bool isNewUser;
+  final bool hasInactiveUser;  // ✅ ADD THIS
   final String? guestId;
-    final bool hasPendingCheckout;  // ✅ Add this
-
+  final bool hasPendingCheckout;
 
   const OtpVerificationScreen({
     super.key,
     required this.otpSessionId,
     required this.phoneNumber,
     required this.isNewUser,
+    this.hasInactiveUser = false,  // ✅ ADD THIS with default
     this.guestId,
-        this.hasPendingCheckout = false,  // ✅ Add this with default
-
+    this.hasPendingCheckout = false,
   });
 
   @override
@@ -82,39 +83,51 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       _isLoading = false;
     });
 
-if (result['success'] == true) {
-  // Show success message
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(widget.isNewUser ? 'Account created!' : 'Login successful!'),
-      backgroundColor: Colors.green,
-      duration: Duration(seconds: 1),
-    ),
-  );
-  
-  // ✅ Get fresh value
-  final prefs = await SharedPreferences.getInstance();
-  final hasPendingCheckout = prefs.getBool('pending_checkout') ?? false;
-  
-  if (hasPendingCheckout) {
-    // ✅ Has items → Go to Checkout
-    await prefs.remove('pending_checkout');
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CheckoutScreen(
-          guestId: null,
-          onOrderPlaced: () {},
+    if (result['success'] == true) {
+      // ✅ Show correct success message
+      String successMessage;
+      if (widget.hasInactiveUser) {
+        successMessage = 'Account Reactivated!';
+      } else if (widget.isNewUser) {
+        successMessage = 'Account Created!';
+      } else {
+        successMessage = 'Login Successful!';
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(successMessage),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 1),
         ),
-      ),
-    );
-  } else {
-    // ✅ No items → Go to Home (THIS IS WHAT YOU NEED)
-    Navigator.pushReplacementNamed(context, '/');
+      );
+      
+      // ✅ Get fresh value
+      final prefs = await SharedPreferences.getInstance();
+      final hasPendingCheckout = prefs.getBool('pending_checkout') ?? false;
+      
+      if (hasPendingCheckout) {
+        // ✅ Has items → Go to Checkout
+        await prefs.remove('pending_checkout');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CheckoutScreen(
+              guestId: null,
+              onOrderPlaced: () {},
+            ),
+          ),
+        );
+      } else {
+        // ✅ No items → Go to Home
+        Navigator.pushReplacementNamed(context, '/');
+      }
+    } else {
+      setState(() {
+        _errorMessage = result['message'] ?? 'OTP verification failed';
+      });
+    }
   }
-}
-}
-
 
   Future<void> _resendOtp() async {
     if (!_canResend) return;

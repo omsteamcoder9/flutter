@@ -106,21 +106,29 @@ Future<void> _removeItem(String itemId) async {
 }
 
 Future<void> _clearCart() async {
-  // ✅ Update UI instantly
+  // ✅ Update UI instantly (count becomes 0 immediately)
   setState(() {
     _cart = {'items': [], 'totalItems': 0, 'totalPrice': 0};
   });
-  widget.onCartUpdate();
+  
+  // ✅ Also update the CartProvider's count instantly
+  final cartProvider = Provider.of<CartProvider>(context, listen: false);
+  cartProvider.updateCartCount(0);  // ← You need to add this method
+  
+  // ❌ REMOVE this line - it's causing the issue
+  // widget.onCartUpdate();
   
   // ✅ Send API in background
   try {
     await ApiService.clearCart(guestId: widget.guestId, token: widget.token);
+    // Confirm with API after success
     widget.onCartUpdate();
   } catch (e) {
+    // If failed, reload to revert
     _loadCart();
     widget.onCartUpdate();
   }
-} 
+}
   String _formatPrice(double price) {
     return '₹${price.toStringAsFixed(0)}';
   }

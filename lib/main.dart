@@ -328,7 +328,7 @@ void _addToCart(dynamic product) async {
                   ),
                   SizedBox(height: 16),
                   Text(
-                    'Loading fresh seafood...',
+                    'Loading Meenavan Fresh...',
                     style: TextStyle(color: Color(0xFF5E0006).withOpacity(0.7)),
                   ),
                 ],

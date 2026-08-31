@@ -108,7 +108,15 @@ class CartProvider extends ChangeNotifier {
     _isLoggedIn = isLoggedIn;
     refreshCartCount();
   }
-  
+  // In CartProvider.dart
+
+void updateCartCount(int newCount) {
+  _cartCount = newCount;
+  if (newCount == 0) {
+    _cartProductIds = {};
+  }
+  notifyListeners();  // ← This updates the bottom nav bar!
+}
   void setGuestId(String guestId) {
     _guestId = guestId;
   }
