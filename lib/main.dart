@@ -575,115 +575,293 @@ void _addToCart(dynamic product) async {
     );
   }
   
-  Widget _buildWhyChooseUs() {
-    final features = [
-      {'icon': Icons.calendar_today, 'title': 'Next-Day Delivery', 'desc': 'Order today, get fresh seafood delivered tomorrow.', 'highlight': 'Tomorrow Delivery'},
-      {'icon': Icons.local_shipping, 'title': 'Fast & Safe Delivery', 'desc': 'Quick and safe delivery with ice packing to your doorstep.', 'highlight': 'Ice Packed'},
-      {'icon': Icons.verified, 'title': 'Premium Quality Fish', 'desc': '100% Fresh seafood sourced directly from harbour daily.', 'highlight': 'Certified Fresh'},
-    ];
+Widget _buildWhyChooseUs() {
+  final features = [
+    {
+      'icon': Icons.calendar_today_rounded,
+      'title': 'Next-Day Delivery',
+      'desc': 'Order today, get fresh seafood delivered tomorrow.',
+      'highlight': 'Tomorrow Delivery',
+    },
+    {
+      'icon': Icons.local_shipping_rounded,
+      'title': 'Fast & Safe Delivery',
+      'desc': 'Quick and safe delivery with ice packing to your doorstep.',
+      'highlight': 'Ice Packed',
+    },
+    {
+      'icon': Icons.verified_rounded,
+      'title': 'Premium Quality Fish',
+      'desc': '100% Fresh seafood sourced directly from harbour daily.',
+      'highlight': 'Certified Fresh',
+    },
+  ];
 
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 16),
-      padding: EdgeInsets.symmetric(vertical: 16),
-      color: Colors.white,
-      child: Column(
-        children: [
-          Text(
-            'Why Choose Our Fresh Seafood',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5E0006),
-            ),
-          ),
-          SizedBox(height: 6),
-          Container(
-            width: 50,
-            height: 2,
-            decoration: BoxDecoration(
-              color: Color(0xFF9B0F06),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          SizedBox(height: 12),
-          Text(
-            'Trusted quality seafood sourced directly from local fishermen',
-            style: TextStyle(color: Color(0xFF5E0006).withOpacity(0.7), fontSize: 12),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 16),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: features.map((feature) {
-                  return Expanded(
-                    child: Container(
-                      margin: EdgeInsets.only(right: feature == features.last ? 0 : 10),
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 12,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
-                        border: Border.all(color: Colors.grey.shade100),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Color(0xFF9B0F06).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(feature['icon'] as IconData, color: Color(0xFF9B0F06), size: 20),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            feature['title'] as String,
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5E0006)),
-                            textAlign: TextAlign.center,
-                          ),
-                          SizedBox(height: 4),
-                          Expanded(
-                            child: Text(
-                              feature['desc'] as String,
-                              style: TextStyle(color: Color(0xFF5E0006).withOpacity(0.6), fontSize: 10, height: 1.2),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Color(0xFF9B0F06).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Color(0xFF9B0F06).withOpacity(0.2)),
-                            ),
-                            child: Text(
-                              feature['highlight'] as String,
-                              style: TextStyle(color: Color(0xFF9B0F06), fontSize: 8, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
+  return Container(
+    width: double.infinity,
+    margin: const EdgeInsets.symmetric(vertical: 16),
+    padding: const EdgeInsets.symmetric(vertical: 18),
+    color: Colors.white,
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+
+        // Responsive outer spacing
+        final horizontalPadding = screenWidth >= 1200
+            ? 48.0
+            : screenWidth >= 700
+                ? 32.0
+                : 12.0;
+
+        // Space between cards
+        final cardGap = screenWidth >= 700 ? 14.0 : 8.0;
+
+        // Responsive card padding
+        final cardPadding = screenWidth >= 900
+            ? 16.0
+            : screenWidth >= 600
+                ? 12.0
+                : 8.0;
+
+        // Responsive icon size
+        final iconSize = screenWidth >= 900
+            ? 22.0
+            : screenWidth >= 600
+                ? 20.0
+                : 17.0;
+
+        final iconPadding = screenWidth >= 700 ? 9.0 : 7.0;
+
+        // Description font
+        final descFontSize = screenWidth >= 900
+            ? 11.0
+            : screenWidth >= 600
+                ? 10.0
+                : 8.5;
+
+        // Highlight font
+        final highlightFontSize = screenWidth >= 900
+            ? 9.0
+            : screenWidth >= 600
+                ? 8.0
+                : 7.0;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // ----------------------------------------------------------
+            // SECTION TITLE
+            // ----------------------------------------------------------
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Why Choose Our Fresh Seafood',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: screenWidth >= 900
+                          ? 22
+                          : screenWidth >= 600
+                              ? 21
+                              : 19,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF5E0006),
+                      height: 1.2,
                     ),
-                  );
-                }).toList(),
+                  ),
+
+                  const SizedBox(height: 7),
+
+                  Container(
+                    width: 52,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF9B0F06),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Text(
+                    'Trusted quality seafood sourced directly from local fishermen',
+                    textAlign: TextAlign.center,
+                    softWrap: true,
+                    style: TextStyle(
+                      color: const Color(0xFF5E0006).withOpacity(0.65),
+                      fontSize: screenWidth >= 700 ? 13 : 11,
+                      height: 1.4,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+
+            const SizedBox(height: 18),
+
+            // ----------------------------------------------------------
+            // THREE CARDS - ALWAYS ONE ROW
+            // ----------------------------------------------------------
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+              ),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: List.generate(
+                    features.length,
+                    (index) {
+                      final feature = features[index];
+
+                      return Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            right: index == features.length - 1
+                                ? 0
+                                : cardGap,
+                          ),
+                          child: Container(
+                            padding: EdgeInsets.all(cardPadding),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFF9B0F06)
+                                    .withOpacity(0.09),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF5E0006)
+                                      .withOpacity(0.05),
+                                  blurRadius: 14,
+                                  spreadRadius: 0,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.center,
+                              children: [
+                                // ------------------------------------------------
+                                // ICON
+                                // ------------------------------------------------
+                                Container(
+                                  padding: EdgeInsets.all(iconPadding),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF9B0F06)
+                                        .withOpacity(0.09),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    feature['icon'] as IconData,
+                                    color: const Color(0xFF9B0F06),
+                                    size: iconSize,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 9),
+
+                                // ------------------------------------------------
+                                // TITLE
+                                // ALWAYS ONE LINE
+                                // ------------------------------------------------
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      feature['title'] as String,
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFF5E0006),
+                                        height: 1.2,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(height: 6),
+
+                                // ------------------------------------------------
+                                // DESCRIPTION
+                                // ------------------------------------------------
+                                Text(
+                                  feature['desc'] as String,
+                                  textAlign: TextAlign.center,
+                                  softWrap: true,
+                                  style: TextStyle(
+                                    color: const Color(0xFF5E0006)
+                                        .withOpacity(0.60),
+                                    fontSize: descFontSize,
+                                    fontWeight: FontWeight.w400,
+                                    height: 1.4,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 10),
+
+                                // ------------------------------------------------
+                                // HIGHLIGHT
+                                // ------------------------------------------------
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal:
+                                        screenWidth >= 700 ? 9 : 6,
+                                    vertical:
+                                        screenWidth >= 700 ? 5 : 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF9B0F06)
+                                        .withOpacity(0.08),
+                                    borderRadius:
+                                        BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: const Color(0xFF9B0F06)
+                                          .withOpacity(0.16),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    feature['highlight'] as String,
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    overflow: TextOverflow.visible,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color:
+                                          const Color(0xFF9B0F06),
+                                      fontSize: highlightFontSize,
+                                      fontWeight: FontWeight.w800,
+                                      height: 1.1,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+}
 
   Widget _buildTestimonialsSection() {
     return const TestimonialsSection();

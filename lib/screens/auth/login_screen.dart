@@ -12,8 +12,9 @@ import '../../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   final String? guestId;
+  final String? prefillPhone;
 
-  const LoginScreen({super.key, this.guestId});
+  const LoginScreen({super.key, this.guestId, this.prefillPhone});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -29,6 +30,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.prefillPhone != null && widget.prefillPhone!.isNotEmpty) {
+      _phoneController.text = widget.prefillPhone!;
+    }
     _loadCartCount();
   }
 
@@ -125,16 +129,33 @@ class _LoginScreenState extends State<LoginScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final result = await authProvider.sendOtp(phoneNumber);
 
+    if (!mounted) return;
+
     setState(() {
       _isLoading = false;
     });
 
-    // ✅ Check if user exists
+    // ✅ If user doesn't exist, redirect to signup silently
+    if (result['exists'] == false) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SignupScreen(
+            guestId: widget.guestId,
+            prefillPhone: phoneNumber,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // ✅ User exists - proceed with OTP verification
     if (result['success'] == true && result['exists'] == true) {
-      // ✅ User exists - proceed with OTP verification
       final prefs = await SharedPreferences.getInstance();
       final hasPendingCheckout = prefs.getBool('pending_checkout') ?? false;
-      
+
+      if (!mounted) return;
+
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -147,26 +168,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       );
-    } else if (result['exists'] == false) {
-      // ✅ User not found - Auto redirect to Signup
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No account found. Redirecting to Signup...'),
-          duration: Duration(seconds: 1),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      
-      Future.delayed(const Duration(milliseconds: 800), () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SignupScreen(
-              guestId: widget.guestId,
-            ),
-          ),
-        );
-      });
     } else {
       // Other error
       setState(() {
@@ -182,6 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
       MaterialPageRoute(
         builder: (context) => SignupScreen(
           guestId: widget.guestId,
+          prefillPhone: phoneNumber.isNotEmpty ? phoneNumber : null,
         ),
       ),
     );

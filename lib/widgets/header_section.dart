@@ -62,6 +62,11 @@ class _HeaderSectionState extends State<HeaderSection> {
     super.dispose();
   }
 
+  // ✅ NEW: Navigate to Home page
+  void _goToHome() {
+    Navigator.popUntil(context, (route) => route.isFirst);
+  }
+
   void _openSearchModal() {
     Navigator.of(context).push(
       PageRouteBuilder(
@@ -107,26 +112,30 @@ class _HeaderSectionState extends State<HeaderSection> {
             ),
             child: Row(
               children: [
-                // Logo
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset(
-                      'assets/images/logo.jpg',
-                      width: 38,
-                      height: 38,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _siteName,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF5E0006),
+                // ✅ Logo + Site name — tapping either goes to Home
+                GestureDetector(
+                  onTap: _goToHome,
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset(
+                        'assets/images/logo.jpg',
+                        width: 38,
+                        height: 38,
+                        fit: BoxFit.contain,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      Text(
+                        _siteName,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5E0006),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 
                 const SizedBox(width: 12),

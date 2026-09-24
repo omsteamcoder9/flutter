@@ -12,8 +12,9 @@ import '../../services/api_service.dart';
 
 class SignupScreen extends StatefulWidget {
   final String? guestId;
+  final String? prefillPhone;
 
-  const SignupScreen({super.key, this.guestId});
+  const SignupScreen({super.key, this.guestId, this.prefillPhone});
 
   @override
   State<SignupScreen> createState() => _SignupScreenState();
@@ -23,13 +24,15 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _phoneController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
-  bool _showLoginOption = false;  // ✅ NEW: Show Login button
   int _currentIndex = 2;
   int _cartCount = 0;
 
   @override
   void initState() {
     super.initState();
+    if (widget.prefillPhone != null && widget.prefillPhone!.isNotEmpty) {
+      _phoneController.text = widget.prefillPhone!;
+    }
     _loadCartCount();
   }
 
@@ -101,80 +104,90 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-Future<void> _sendOtp() async {
-  final phoneNumber = _phoneController.text.trim();
-  
-  if (phoneNumber.isEmpty) {
-    setState(() {
-      _errorMessage = 'Please enter phone number';
-      _showLoginOption = false;
-    });
-    return;
-  }
-  
-  if (phoneNumber.length < 10) {
-    setState(() {
-      _errorMessage = 'Please enter valid 10-digit phone number';
-      _showLoginOption = false;
-    });
-    return;
-  }
-
-  setState(() {
-    _isLoading = true;
-    _errorMessage = null;
-    _showLoginOption = false;
-  });
-
-  final authProvider = Provider.of<AuthProvider>(context, listen: false);
-  
-  // ✅ FIX: Use sendSignupOtp for signup
-  final result = await authProvider.sendSignupOtp(phoneNumber);
-
-  setState(() {
-    _isLoading = false;
-  });
-
-  // ✅ Handle response
-  if (result['success'] == true) {
-    // New user or inactive user - proceed with OTP
-    final prefs = await SharedPreferences.getInstance();
-    final hasPendingCheckout = prefs.getBool('pending_checkout') ?? false;
+  Future<void> _sendOtp() async {
+    final phoneNumber = _phoneController.text.trim();
     
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => OtpVerificationScreen(
-          otpSessionId: result['otpSessionId'],
-          phoneNumber: phoneNumber,
-          isNewUser: result['isNewUser'] ?? true,
-          hasInactiveUser: result['hasInactiveUser'] ?? false,
-          guestId: widget.guestId,
-          hasPendingCheckout: hasPendingCheckout,
+    if (phoneNumber.isEmpty) {
+      setState(() {
+        _errorMessage = 'Please enter phone number';
+      });
+      return;
+    }
+    
+    if (phoneNumber.length < 10) {
+      setState(() {
+        _errorMessage = 'Please enter valid 10-digit phone number';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    // ✅ FIX: Use sendSignupOtp for signup
+    final result = await authProvider.sendSignupOtp(phoneNumber);
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    // ✅ If user already exists and is active, redirect to login silently
+    if (result['exists'] == true && result['isActive'] == true) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => LoginScreen(
+            guestId: widget.guestId,
+            prefillPhone: phoneNumber,
+          ),
         ),
-      ),
-    );
-  } else if (result['exists'] == true && result['isActive'] == true) {
-    // Account exists and is active - Show "Sign In" button
-    setState(() {
-      _errorMessage = 'Account already exists. Please login.';
-      _showLoginOption = true;
-    });
-  } else {
-    // Other error
-    setState(() {
-      _errorMessage = result['message'] ?? 'Something went wrong';
-      _showLoginOption = false;
-    });
+      );
+      return;
+    }
+
+    // ✅ New user or inactive user - proceed with OTP
+    if (result['success'] == true) {
+      final prefs = await SharedPreferences.getInstance();
+      final hasPendingCheckout = prefs.getBool('pending_checkout') ?? false;
+
+      if (!mounted) return;
+      
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OtpVerificationScreen(
+            otpSessionId: result['otpSessionId'],
+            phoneNumber: phoneNumber,
+            isNewUser: result['isNewUser'] ?? true,
+            hasInactiveUser: result['hasInactiveUser'] ?? false,
+            guestId: widget.guestId,
+            hasPendingCheckout: hasPendingCheckout,
+          ),
+        ),
+      );
+    } else {
+      // Other error
+      setState(() {
+        _errorMessage = result['message'] ?? 'Something went wrong';
+      });
+    }
   }
-}
 
   void _goToLogin() {
     final phoneNumber = _phoneController.text.trim();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => LoginScreen(guestId: widget.guestId),
+        builder: (context) => LoginScreen(
+          guestId: widget.guestId,
+          prefillPhone: phoneNumber.isNotEmpty ? phoneNumber : null,
+        ),
       ),
     );
   }
@@ -276,7 +289,6 @@ Future<void> _sendOtp() async {
                           if (_errorMessage != null) {
                             setState(() {
                               _errorMessage = null;
-                              _showLoginOption = false;
                             });
                           }
                         },
@@ -286,64 +298,33 @@ Future<void> _sendOtp() async {
                 ),
               ),
               
-              // ✅ Error Message with "Login" option
+              // ✅ Error Message
               if (_errorMessage != null) ...[
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _showLoginOption ? Colors.orange.shade50 : Colors.red.shade50,
+                    color: Colors.red.shade50,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: _showLoginOption ? Colors.orange.shade200 : Colors.red.shade200,
-                    ),
+                    border: Border.all(color: Colors.red.shade200),
                   ),
-                  child: Column(
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          Icon(
-                            _showLoginOption ? Icons.info_outline : Icons.error_outline,
-                            color: _showLoginOption ? Colors.orange : Colors.red,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: TextStyle(
-                                color: _showLoginOption ? Colors.orange.shade700 : Colors.red.shade700,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
+                      Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 20,
                       ),
-                      // ✅ Show "Login" button when account exists
-                      if (_showLoginOption) ...[
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _goToLogin,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF9B0F06),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text(
-                              'Sign In',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontSize: 13,
                           ),
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),

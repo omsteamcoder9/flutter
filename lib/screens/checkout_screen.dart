@@ -1268,6 +1268,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
       ),
       validator: (value) {
         if (value == null || value.isEmpty) {
+          if (label == 'Email Address') return null;
           return 'Please enter $label';
         }
         if (label == 'Email Address' && !value.contains('@')) {
