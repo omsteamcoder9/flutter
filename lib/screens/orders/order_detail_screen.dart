@@ -133,13 +133,13 @@ Future<void> _refreshOrderDetails() async {
         title: Text(
           'Order #${_currentOrder.orderId}',
           style: const TextStyle(
-            color: Color(0xFF5E0006),
+            color: Color(0xFF063B5C),
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.receipt_long, color: Color(0xFF9B0F06)),
+            icon: const Icon(Icons.receipt_long, color: Color(0xFF07566B)),
             onPressed: _downloadReceiptPDF,
             tooltip: 'Download Receipt PDF',
           ),
@@ -187,7 +187,7 @@ Future<void> _refreshOrderDetails() async {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF5E0006), Color(0xFF9B0F06)],
+          colors: [Color(0xFF063B5C), Color(0xFF07566B)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -396,90 +396,67 @@ Future<void> _refreshOrderDetails() async {
       ),
     );
   }
-
-  Widget _buildOrderItem(OrderProduct item) {
-    final imageUrl = _getImageUrl(item.image);
-    
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: imageUrl.isNotEmpty
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.image_not_supported, size: 24, color: Colors.grey);
-                    },
-                  ),
-                )
-              : const Icon(Icons.fastfood, size: 24, color: Colors.grey),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.name,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 2),
-              if (item.variantName.isNotEmpty)
-                Text(
-                  'Variant: ${item.variantName}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-              Text(
-                'Weight: ${item.getWeightDisplay()}',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Qty: ${item.quantity} × ₹${item.price.toStringAsFixed(2)}',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-              ),
-            ],
-          ),
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+Widget _buildOrderItem(OrderProduct item) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // ✅ No image, no icon, no placeholder box
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '₹${item.totalPrice.toStringAsFixed(2)}',
+              item.name,
               style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF9B0F06),
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            if (item.originalPrice > item.price) ...[
-              const SizedBox(height: 2),
+            const SizedBox(height: 2),
+            if (item.variantName.isNotEmpty)
               Text(
-                '₹${item.originalPrice.toStringAsFixed(2)}',
-                style: TextStyle(
-                  fontSize: 11,
-                  decoration: TextDecoration.lineThrough,
-                  color: Colors.grey.shade500,
-                ),
+                'Variant: ${item.variantName}',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
-            ],
+            Text(
+              'Weight: ${item.getWeightDisplay()}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Qty: ${item.quantity} × ₹${item.price.toStringAsFixed(2)}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
           ],
         ),
-      ],
-    );
-  }
+      ),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            '₹${item.totalPrice.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF07566B),
+            ),
+          ),
+          if (item.originalPrice > item.price) ...[
+            const SizedBox(height: 2),
+            Text(
+              '₹${item.originalPrice.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 11,
+                decoration: TextDecoration.lineThrough,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ],
+      ),
+    ],
+  );
+}
 
   Widget _buildPaymentSummaryCard() {
     return Card(
@@ -560,7 +537,7 @@ Future<void> _refreshOrderDetails() async {
             style: TextStyle(
               fontSize: isTotal ? 15 : 13,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: isTotal ? const Color(0xFF5E0006) : Colors.grey.shade700,
+              color: isTotal ? const Color(0xFF063B5C) : Colors.grey.shade700,
             ),
           ),
           Text(
@@ -568,7 +545,7 @@ Future<void> _refreshOrderDetails() async {
             style: TextStyle(
               fontSize: isTotal ? 16 : 13,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: isTotal ? const Color(0xFF9B0F06) : Colors.grey.shade800,
+              color: isTotal ? const Color(0xFF07566B) : Colors.grey.shade800,
             ),
           ),
         ],

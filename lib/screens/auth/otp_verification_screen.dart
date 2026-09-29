@@ -356,9 +356,9 @@ class _OtpVerificationScreenState
             BorderRadius.circular(12),
         border: Border.all(
           color: isActive
-              ? const Color(0xFF5E0006)
+              ? const Color(0xFF063B5C)
               : digit.isNotEmpty
-                  ? const Color(0xFF5E0006)
+                  ? const Color(0xFF063B5C)
                   : Colors.grey.shade300,
           width: isActive || digit.isNotEmpty
               ? 2
@@ -371,7 +371,7 @@ class _OtpVerificationScreenState
         style: const TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF5E0006),
+          color: Color(0xFF063B5C),
         ),
       ),
     );
@@ -392,7 +392,7 @@ class _OtpVerificationScreenState
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back,
-            color: Color(0xFF5E0006),
+            color: Color(0xFF063B5C),
           ),
           onPressed: () {
             Navigator.pop(context);
@@ -422,7 +422,7 @@ class _OtpVerificationScreenState
                     fontWeight:
                         FontWeight.bold,
                     color:
-                        Color(0xFF5E0006),
+                        Color(0xFF063B5C),
                   ),
                 ),
 
@@ -534,7 +534,7 @@ class _OtpVerificationScreenState
                         ElevatedButton.styleFrom(
                       backgroundColor:
                           const Color(
-                        0xFF5E0006,
+                        0xFF063B5C,
                       ),
                       foregroundColor:
                           Colors.white,
@@ -613,7 +613,7 @@ class _OtpVerificationScreenState
                             TextStyle(
                           color: _canResend
                               ? const Color(
-                                  0xFFD53E0F,
+                                  0xFF28A8BA,
                                 )
                               : Colors.grey,
 

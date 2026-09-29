@@ -42,7 +42,7 @@ class _CategorySectionState extends State<CategorySection> {
             height: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF9B0F06)),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF07566B)),
             ),
           ),
         ),
@@ -63,7 +63,7 @@ class _CategorySectionState extends State<CategorySection> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF5E0006),
+              color: Color(0xFF063B5C),
             ),
           ),
         ),
@@ -95,7 +95,7 @@ class _CategorySectionState extends State<CategorySection> {
                         height: 60,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFF9B0F06).withOpacity(0.08),
+                          color: const Color(0xFF07566B).withOpacity(0.08),
                           image: imageUrl.isNotEmpty
                               ? DecorationImage(
                                   image: NetworkImage(imageUrl),
@@ -106,7 +106,7 @@ class _CategorySectionState extends State<CategorySection> {
                         child: imageUrl.isEmpty
                             ? Icon(
                                 Icons.category,
-                                color: const Color(0xFF9B0F06),
+                                color: const Color(0xFF07566B),
                                 size: 28,
                               )
                             : null,
@@ -117,7 +117,7 @@ class _CategorySectionState extends State<CategorySection> {
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF5E0006),
+                          color: Color(0xFF063B5C),
                         ),
                         textAlign: TextAlign.center,
                         maxLines: 2,

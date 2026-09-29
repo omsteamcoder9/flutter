@@ -409,7 +409,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
         ),
         backgroundColor: Colors.white,
         foregroundColor:
-            const Color(0xFF5E0006),
+            const Color(0xFF063B5C),
         elevation: 0,
 
         /*
@@ -506,7 +506,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor:
-                    const Color(0xFF5E0006),
+                    const Color(0xFF063B5C),
                 foregroundColor: Colors.white,
               ),
               child: const Text(
@@ -537,7 +537,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
           const Icon(
             Icons.check_circle,
             size: 80,
-            color: Color(0xFF5E0006),
+            color: Color(0xFF063B5C),
           ),
 
           const SizedBox(height: 16),
@@ -547,7 +547,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF5E0006),
+              color: Color(0xFF063B5C),
             ),
           ),
 
@@ -602,7 +602,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor:
-                    const Color(0xFF5E0006),
+                    const Color(0xFF063B5C),
                 foregroundColor: Colors.white,
                 padding:
                     const EdgeInsets.symmetric(
@@ -652,7 +652,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF5E0006),
+              color: Color(0xFF063B5C),
             ),
           ),
 
@@ -742,7 +742,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
                         fontWeight:
                             FontWeight.bold,
                         color:
-                            Color(0xFF5E0006),
+                            Color(0xFF063B5C),
                       ),
                     ),
                   ],
@@ -814,7 +814,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF5E0006),
+              color: Color(0xFF063B5C),
             ),
           ),
 
@@ -882,7 +882,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF5E0006),
+              color: Color(0xFF063B5C),
             ),
           ),
 
@@ -948,7 +948,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
                       ? FontWeight.bold
                       : FontWeight.normal,
               color: isTotal
-                  ? const Color(0xFF5E0006)
+                  ? const Color(0xFF063B5C)
                   : null,
             ),
           ),

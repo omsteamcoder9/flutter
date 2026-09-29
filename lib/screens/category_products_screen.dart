@@ -102,7 +102,7 @@ Future<void> _addToCart(dynamic product) async {
     SnackBar(
       content: Text('${product['name']} added to cart'),
       duration: const Duration(seconds: 1),
-      backgroundColor: const Color(0xFF9B0F06),
+      backgroundColor: const Color(0xFF07566B),
     ),
   );
   
@@ -212,7 +212,7 @@ Future<void> _addToCart(dynamic product) async {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: const BoxDecoration(
-              color: Color(0xFF5E0006),
+              color: Color(0xFF063B5C),
               borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(16),
                 bottomRight: Radius.circular(16),
@@ -243,7 +243,12 @@ Future<void> _addToCart(dynamic product) async {
           
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF07566B)),
+                    ),
+                  )
                 : _error != null
                     ? Center(child: Text('Error: $_error'))
                     : _products.isEmpty

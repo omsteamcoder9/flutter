@@ -131,7 +131,7 @@ class _HeaderSectionState extends State<HeaderSection> {
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF5E0006),
+                          color: Color(0xFF063B5C),
                         ),
                       ),
                     ],
@@ -159,12 +159,12 @@ class _HeaderSectionState extends State<HeaderSection> {
                           SizedBox(width: 16),
                           Icon(
                             Icons.search,
-                            color: Color(0xFF5E0006),
+                            color: Color(0xFF063B5C),
                             size: 20,
                           ),
                           SizedBox(width: 8),
                           Text(
-                            'Search here...',
+                            'Search here',
                             style: TextStyle(
                               color: Colors.grey,
                               fontSize: 14,
@@ -260,13 +260,13 @@ class _HeaderSectionState extends State<HeaderSection> {
                         width: 24,
                         height: 24,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFD53E0F).withOpacity(0.2),
+                          color: const Color(0xFF28A8BA).withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
                           Icons.category,
                           size: 14,
-                          color: Color(0xFFD53E0F),
+                          color: Color(0xFF28A8BA),
                         ),
                       );
                     },
@@ -278,14 +278,14 @@ class _HeaderSectionState extends State<HeaderSection> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: isActive ? Colors.white : const Color(0xFF5E0006),
+              color: isActive ? Colors.white : const Color(0xFF063B5C),
             ),
           ),
-          backgroundColor: isActive ? const Color(0xFF5E0006) : const Color(0xFFF5F5F5),
+          backgroundColor: isActive ? const Color(0xFF063B5C) : const Color(0xFFF5F5F5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
             side: BorderSide(
-              color: isActive ? const Color(0xFF5E0006) : Colors.transparent,
+              color: isActive ? const Color(0xFF063B5C) : Colors.transparent,
               width: 0,
             ),
           ),
@@ -407,7 +407,7 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
       child: Container(
         width: double.infinity,
         height: double.infinity,
-        color: const Color(0xFF5E0006),
+        color: const Color(0xFF063B5C),
         child: SafeArea(
           child: Column(
             children: [
@@ -421,7 +421,7 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
                           color: Colors.white.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFFD53E0F).withOpacity(0.3),
+                            color: const Color(0xFF28A8BA).withOpacity(0.3),
                           ),
                         ),
                         child: TextField(
@@ -429,14 +429,14 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
                           focusNode: _focusNode,
                           autofocus: true,
                           style: const TextStyle(
-                            color: Color(0xFFEED9B9),
+                            color: Color(0xFFE0F0F5),
                             fontSize: 16,
                           ),
                           onSubmitted: (_) => _handleSearchSubmit(),
                           decoration: InputDecoration(
                             hintText: 'Search products...',
                             hintStyle: TextStyle(
-                              color: const Color(0xFFEED9B9).withOpacity(0.6),
+                              color: const Color(0xFFE0F0F5).withOpacity(0.6),
                               fontSize: 16,
                             ),
                             border: InputBorder.none,
@@ -446,14 +446,14 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
                             ),
                             prefixIcon: Icon(
                               Icons.search,
-                              color: const Color(0xFFD53E0F),
+                              color: const Color(0xFF28A8BA),
                               size: 22,
                             ),
                             suffixIcon: widget.searchController.text.isNotEmpty
                                 ? IconButton(
                                     icon: Icon(
                                       Icons.close,
-                                      color: const Color(0xFFEED9B9).withOpacity(0.7),
+                                      color: const Color(0xFFE0F0F5).withOpacity(0.7),
                                       size: 20,
                                     ),
                                     onPressed: _clearSearch,
@@ -473,12 +473,12 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
                           color: Colors.white.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFFD53E0F).withOpacity(0.3),
+                            color: const Color(0xFF28A8BA).withOpacity(0.3),
                           ),
                         ),
                         child: const Icon(
                           Icons.search,
-                          color: Color(0xFFEED9B9),
+                          color: Color(0xFFE0F0F5),
                           size: 22,
                         ),
                       ),
@@ -493,12 +493,12 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
                           color: Colors.white.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFFD53E0F).withOpacity(0.3),
+                            color: const Color(0xFF28A8BA).withOpacity(0.3),
                           ),
                         ),
                         child: const Icon(
                           Icons.close,
-                          color: Color(0xFFEED9B9),
+                          color: Color(0xFFE0F0F5),
                           size: 24,
                         ),
                       ),
@@ -513,7 +513,7 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
                     color: Colors.white.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: const Color(0xFFD53E0F).withOpacity(0.3),
+                      color: const Color(0xFF28A8BA).withOpacity(0.3),
                     ),
                   ),
                   child: _buildResultsContent(),
@@ -533,12 +533,12 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD53E0F)),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF28A8BA)),
             ),
             SizedBox(height: 16),
             Text(
               'Searching...',
-              style: TextStyle(color: Color(0xFFEED9B9), fontSize: 14),
+              style: TextStyle(color: Color(0xFFE0F0F5), fontSize: 14),
             ),
           ],
         ),
@@ -549,7 +549,7 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
       return const Center(
         child: Text(
           'No products found',
-          style: TextStyle(color: Color(0xFFEED9B9), fontSize: 14),
+          style: TextStyle(color: Color(0xFFE0F0F5), fontSize: 14),
         ),
       );
     }
@@ -558,7 +558,7 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
       return const Center(
         child: Text(
           'Start typing to search products',
-          style: TextStyle(color: Color(0xFFEED9B9), fontSize: 14),
+          style: TextStyle(color: Color(0xFFE0F0F5), fontSize: 14),
         ),
       );
     }
@@ -610,7 +610,7 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
                 color: Colors.white.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: const Color(0xFFD53E0F).withOpacity(0.3),
+                  color: const Color(0xFF28A8BA).withOpacity(0.3),
                 ),
               ),
               child: imageUrl != null
@@ -623,7 +623,7 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
                           return const Center(
                             child: Icon(
                               Icons.restaurant_menu,
-                              color: Color(0xFFEED9B9),
+                              color: Color(0xFFE0F0F5),
                               size: 24,
                             ),
                           );
@@ -633,7 +633,7 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
                   : const Center(
                       child: Icon(
                         Icons.restaurant_menu,
-                        color: Color(0xFFEED9B9),
+                        color: Color(0xFFE0F0F5),
                         size: 24,
                       ),
                     ),
@@ -646,7 +646,7 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
                   Text(
                     product['name'] ?? 'Product Name',
                     style: const TextStyle(
-                      color: Color(0xFFEED9B9),
+                      color: Color(0xFFE0F0F5),
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -660,14 +660,14 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
                       Text(
                         categoryName,
                         style: const TextStyle(
-                          color: Color(0xFFD53E0F),
+                          color: Color(0xFF28A8BA),
                           fontSize: 12,
                         ),
                       ),
                       Text(
                         '₹${product['price'] ?? product['basePrice'] ?? 0}',
                         style: const TextStyle(
-                          color: Color(0xFFEED9B9),
+                          color: Color(0xFFE0F0F5),
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),

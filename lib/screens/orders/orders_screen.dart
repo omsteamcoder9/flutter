@@ -51,7 +51,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         title: const Text(
           'My Orders',
           style: TextStyle(
-            color: Color(0xFF5E0006),
+            color: Color(0xFF063B5C),
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -71,7 +71,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               height: 40,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF9B0F06)),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF07566B)),
               ),
             ),
             SizedBox(height: 16),
@@ -93,7 +93,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             ElevatedButton(
               onPressed: _loadOrders,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF9B0F06),
+                backgroundColor: const Color(0xFF07566B),
               ),
               child: const Text('Retry'),
             ),
@@ -116,18 +116,25 @@ class _OrdersScreenState extends State<OrdersScreen> {
             const SizedBox(height: 8),
             const Text('Your orders will appear here'),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF9B0F06),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('Continue Shopping'),
-            ),
+  ElevatedButton(
+  onPressed: () {
+    Navigator.pop(context);
+  },
+  style: ElevatedButton.styleFrom(
+    backgroundColor: const Color(0xFF07566B),
+    foregroundColor: Colors.white,                    // ✅ text + icon colour
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+  ),
+  child: const Text(
+    'Continue Shopping',
+    style: TextStyle(
+      color: Colors.white,                            // ✅ explicit white
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+),
           ],
         ),
       );
@@ -135,7 +142,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
     return RefreshIndicator(
       onRefresh: _loadOrders,
-      color: const Color(0xFF9B0F06),
+      color: const Color(0xFF07566B),
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: _orders.length,
@@ -165,7 +172,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Order Header
+          // ==================== ORDER HEADER ====================
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -186,7 +193,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF5E0006),
+                        color: Color(0xFF063B5C),
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -217,8 +224,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ],
             ),
           ),
-          
-          // Order Items Preview - NO IMAGE, NO ICON
+
+          // ==================== ORDER ITEMS PREVIEW (TEXT ONLY) ====================
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -226,6 +233,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ...order.products.take(2).map((product) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Column(
@@ -275,13 +283,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ],
             ),
           ),
-          
-          // Order Total
+
+          // ==================== ORDER TOTAL ====================
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Divider(color: Colors.grey.shade200),
           ),
-          
+
           Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
@@ -302,21 +310,21 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF9B0F06),
+                        color: Color(0xFF07566B),
                       ),
                     ),
                   ],
                 ),
                 Row(
                   children: [
-                    if (order.orderStatus != 'cancelled' && 
+                    if (order.orderStatus != 'cancelled' &&
                         order.orderStatus != 'delivered')
                       TextButton(
                         onPressed: () => _showCancelDialog(order),
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.red,
                         ),
-                        child: const Text('Cancel'),
+                        child: const Text('Cancel Order'),
                       ),
                     const SizedBox(width: 8),
                     ElevatedButton(
@@ -329,7 +337,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ).then((_) => _loadOrders());
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF9B0F06),
+                        backgroundColor: const Color(0xFF07566B),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -398,10 +406,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
     try {
       final response = await ApiService.cancelOrder(order.id, reason: reason.isEmpty ? null : reason);
-      
+
       if (mounted) {
         Navigator.pop(context);
-        
+
         if (response['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -432,9 +440,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
     }
   }
 
-String _formatDate(DateTime date) {
-  // Convert UTC to local timezone
-  final localDate = date.toLocal();
-  return '${localDate.day}/${localDate.month}/${localDate.year} ${localDate.hour.toString().padLeft(2, '0')}:${localDate.minute.toString().padLeft(2, '0')}';
-}
+  String _formatDate(DateTime date) {
+    // Convert UTC to local timezone
+    final localDate = date.toLocal();
+    return '${localDate.day}/${localDate.month}/${localDate.year} ${localDate.hour.toString().padLeft(2, '0')}:${localDate.minute.toString().padLeft(2, '0')}';
+  }
 }

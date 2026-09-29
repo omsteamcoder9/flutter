@@ -199,13 +199,13 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF5E0006)),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF063B5C)),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Log In',
           style: TextStyle(
-            color: Color(0xFF5E0006),
+            color: Color(0xFF063B5C),
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -224,7 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF5E0006),
+                    color: Color(0xFF063B5C),
                   ),
                 ),
               ),
@@ -246,7 +246,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF5E0006),
+                  color: Color(0xFF063B5C),
                 ),
               ),
               const SizedBox(height: 8),
@@ -335,7 +335,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _sendOtp,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF5E0006),
+                    backgroundColor: const Color(0xFF063B5C),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -375,7 +375,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Text(
                       'Create Account',
                       style: TextStyle(
-                        color: Color(0xFF9B0F06),
+                        color: Color(0xFF07566B),
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),

@@ -170,13 +170,13 @@ Future<void> _clearCart() async {
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF5E0006),
+            color: Color(0xFF063B5C),
           ),
         ),
         backgroundColor: Colors.white,
         elevation: 1,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF5E0006)),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF063B5C)),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -193,7 +193,7 @@ Future<void> _clearCart() async {
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF9B0F06)),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF07566B)),
               ),
             )
           : items.isEmpty
@@ -216,7 +216,7 @@ Future<void> _clearCart() async {
                       ElevatedButton(
                         onPressed: () => Navigator.pop(context),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF5E0006),
+                          backgroundColor: const Color(0xFF063B5C),
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
@@ -247,9 +247,19 @@ Future<void> _clearCart() async {
                           final quantity = item['quantity'] ?? 1;
                           final variantName = item['variantName'];
                           final isRemoving = _removingItems.contains(itemId);
+
+                          // ✅ FIXED — Build R2 image URL properly
                           String imageUrl = '';
-                          if (item['productImage'] != null && item['productImage'].isNotEmpty) {
-                            imageUrl = '${ApiService.imageBaseUrl}${item['productImage']}';
+                          if (item['productImage'] != null && item['productImage'].toString().isNotEmpty) {
+                            String imagePath = item['productImage'].toString();
+                            if (imagePath.startsWith('http')) {
+                              imageUrl = imagePath;
+                            } else {
+                              if (imagePath.startsWith('/')) {
+                                imagePath = imagePath.substring(1);
+                              }
+                              imageUrl = '${ApiService.imageBaseUrl}/$imagePath';
+                            }
                           }
 
                           return Container(
@@ -306,7 +316,7 @@ Future<void> _clearCart() async {
                                           variantName,
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: Color(0xFF5E0006),
+                                            color: Color(0xFF063B5C),
                                           ),
                                         ),
                                       const SizedBox(height: 6),
@@ -315,7 +325,7 @@ Future<void> _clearCart() async {
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 16,
-                                          color: Color(0xFF5E0006),
+                                          color: Color(0xFF063B5C),
                                         ),
                                       ),
                                     ],
@@ -397,7 +407,7 @@ Future<void> _clearCart() async {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text('Shipping', style: TextStyle(fontSize: 15)),
-                                const Text('FREE', style: TextStyle(fontSize: 15, color: Color(0xFFD53E0F), fontWeight: FontWeight.w500)),
+                                const Text('FREE', style: TextStyle(fontSize: 15, color: Color(0xFF28A8BA), fontWeight: FontWeight.w500)),
                               ],
                             ),
                             const SizedBox(height: 10),
@@ -413,7 +423,7 @@ Future<void> _clearCart() async {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text('Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                Text(_formatPrice(total), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF5E0006))),
+                                Text(_formatPrice(total), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF063B5C))),
                               ],
                             ),
                           ],
@@ -472,7 +482,7 @@ Future<void> _clearCart() async {
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF5E0006),
+                            backgroundColor: const Color(0xFF063B5C),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),

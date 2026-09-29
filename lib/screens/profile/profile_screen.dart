@@ -5,6 +5,9 @@ import '../../providers/cart_provider.dart';
 import '../orders/orders_screen.dart';
 import '../terms_screen.dart';
 import '../privacy_screen.dart';
+import '../shipping_screen.dart';
+import '../returns_screen.dart';
+import '../contact_screen.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../widgets/cart_drawer.dart';
 import '../../services/api_service.dart';
@@ -31,12 +34,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final isLoggedIn = authProvider.isLoggedIn;
       final token = authProvider.token;
-      
+
       final response = await ApiService.getCart(
         guestId: isLoggedIn ? null : null,
         token: token,
       );
-      
+
       if (response['success'] == true && mounted) {
         setState(() {
           _cartCount = response['data']?['totalItems'] ?? 0;
@@ -51,7 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     String? guestIdToUse = authProvider.isLoggedIn ? null : null;
     String? tokenToUse = authProvider.isLoggedIn ? authProvider.token : null;
-    
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -68,7 +71,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showAuthDialog() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     if (authProvider.isLoggedIn) {
       // Already on profile screen
     } else {
@@ -94,13 +97,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: const Text(
           'My Account',
           style: TextStyle(
-            color: Color(0xFF5E0006),
+            color: Color(0xFF063B5C),
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout, color: Color(0xFF5E0006)),
+            icon: const Icon(Icons.logout, color: Color(0xFF063B5C)),
             onPressed: () async {
               await authProvider.logout();
               if (context.mounted) {
@@ -120,7 +123,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF5E0006), Color(0xFFD53E0F)],
+                  colors: [Color(0xFF063B5C), Color(0xFF28A8BA)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -139,7 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Icon(
                         Icons.person,
                         size: 30,
-                        color: Color(0xFF5E0006),
+                        color: Color(0xFF063B5C),
                       ),
                     ),
                   ),
@@ -180,9 +183,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Menu Items
             _buildMenuItem(
               context,
@@ -196,6 +199,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               },
             ),
+
+            // Shipping
+            _buildMenuItem(
+              context,
+              Icons.local_shipping_outlined,
+              'Shipping',
+              '',
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ShippingScreen()),
+                );
+              },
+            ),
+
+            // Returns
+            _buildMenuItem(
+              context,
+              Icons.assignment_return_outlined,
+              'Returns',
+              '',
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ReturnsScreen()),
+                );
+              },
+            ),
+
+            // ✅ Contact Us — NEW
+            _buildMenuItem(
+              context,
+              Icons.support_agent_outlined,
+              'Contact Us',
+              'Get in touch with us',
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ContactScreen()),
+                );
+              },
+            ),
+
             _buildMenuItem(
               context,
               Icons.description_outlined,
@@ -220,9 +266,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               },
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Logout Button
             SizedBox(
               width: double.infinity,
@@ -233,14 +279,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Navigator.pop(context);
                   }
                 },
-                icon: const Icon(Icons.logout, color: Color(0xFF5E0006)),
+                icon: const Icon(Icons.logout, color: Color(0xFF063B5C)),
                 label: const Text(
                   'Logout',
-                  style: TextStyle(color: Color(0xFF5E0006)),
+                  style: TextStyle(color: Color(0xFF063B5C)),
                 ),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: const BorderSide(color: Color(0xFF5E0006)),
+                  side: const BorderSide(color: Color(0xFF063B5C)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -296,10 +342,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF5E0006).withOpacity(0.08),
+                    color: const Color(0xFF063B5C).withOpacity(0.08),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, color: const Color(0xFF5E0006), size: 22),
+                  child: Icon(icon, color: const Color(0xFF063B5C), size: 22),
                 ),
                 const SizedBox(width: 14),
                 Expanded(

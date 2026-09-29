@@ -126,14 +126,14 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
     if (widget.products.isEmpty) {
       return Container(
         height: 350,
-        color: const Color(0xFF5E0006),
+        color: const Color(0xFF063B5C),
         child: const Center(
           child: SizedBox(
             width: 28,
             height: 28,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD53E0F)),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF28A8BA)),
             ),
           ),
         ),
@@ -148,7 +148,7 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
 
     return Container(
       width: double.infinity,
-      color: const Color(0xFF5E0006),
+      color: const Color(0xFF063B5C),
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -203,7 +203,7 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF5E0006),
+                        color: Color(0xFF063B5C),
                       ),
                     ),
                   ),
@@ -230,7 +230,7 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFFD53E0F),
+                        color: Color(0xFF28A8BA),
                       ),
                     ),
                   ),
@@ -292,7 +292,7 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF5E0006),
+                          color: const Color(0xFF063B5C),
                           borderRadius: BorderRadius.circular(30),
                         ),
                         child: const Row(
@@ -347,7 +347,7 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFD53E0F).withOpacity(0.2),
+                  color: const Color(0xFF28A8BA).withOpacity(0.2),
                   blurRadius: 20,
                   spreadRadius: 2,
                 ),
@@ -375,20 +375,20 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
-                              color: const Color(0xFF9B0F06),
+                              color: const Color(0xFF07566B),
                               child: const Icon(
                                 Icons.image_not_supported,
-                                color: Color(0xFFD53E0F),
+                                color: Color(0xFF28A8BA),
                                 size: 35,
                               ),
                             );
                           },
                         )
                       : Container(
-                          color: const Color(0xFF9B0F06),
+                          color: const Color(0xFF07566B),
                           child: const Icon(
                             Icons.image,
-                            color: Color(0xFFD53E0F),
+                            color: Color(0xFF28A8BA),
                             size: 35,
                           ),
                         ),
@@ -403,7 +403,7 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFFD53E0F),
+                color: const Color(0xFF28A8BA),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
@@ -455,8 +455,8 @@ class _HeroSectionState extends State<HeroSection> with TickerProviderStateMixin
             height: 6,
             decoration: BoxDecoration(
               color: _currentSlide == index
-                  ? const Color(0xFFD53E0F)
-                  : const Color(0xFFD53E0F).withOpacity(0.3),
+                  ? const Color(0xFF28A8BA)
+                  : const Color(0xFF28A8BA).withOpacity(0.3),
               borderRadius: BorderRadius.circular(3),
             ),
           ),

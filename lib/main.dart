@@ -40,7 +40,18 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'SeaFood App',
       theme: ThemeData(
-        primarySwatch: Colors.orange,
+        primarySwatch: MaterialColor(0xFF07566B, {
+          50: Color(0xFFE0F0F5),
+          100: Color(0xFFB3DDE8),
+          200: Color(0xFF80C7D9),
+          300: Color(0xFF4DB1CA),
+          400: Color(0xFF269FBC),
+          500: Color(0xFF07566B),
+          600: Color(0xFF064F62),
+          700: Color(0xFF054658),
+          800: Color(0xFF043C4D),
+          900: Color(0xFF032B38),
+        }),
         scaffoldBackgroundColor: Colors.white,
         fontFamily: 'System',
         visualDensity: VisualDensity.adaptivePlatformDensity,
@@ -253,7 +264,7 @@ void _addToCart(dynamic product) async {
     SnackBar(
       content: Text('${product['name']} added to cart'),
       duration: const Duration(seconds: 1),
-      backgroundColor: const Color(0xFF9B0F06),
+      backgroundColor: const Color(0xFF07566B),
     ),
   );
   
@@ -323,13 +334,13 @@ void _addToCart(dynamic product) async {
                     height: 40,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF9B0F06)),
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF07566B)),
                     ),
                   ),
                   SizedBox(height: 16),
                   Text(
                     'Loading Meenavan Fresh...',
-                    style: TextStyle(color: Color(0xFF5E0006).withOpacity(0.7)),
+                    style: TextStyle(color: Color(0xFF063B5C).withOpacity(0.7)),
                   ),
                 ],
               ),
@@ -399,7 +410,7 @@ void _addToCart(dynamic product) async {
       padding: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF5E0006), Color(0xFF9B0F06), Color(0xFFD53E0F)],
+          colors: [Color(0xFF063B5C), Color(0xFF07566B), Color(0xFF28A8BA)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -496,14 +507,14 @@ void _addToCart(dynamic product) async {
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF5E0006),
+                    color: Color(0xFF063B5C),
                   ),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: 6),
                 Text(
                   'Discover premium quality sea fish, fresh from the harbour to your kitchen',
-                  style: TextStyle(color: Color(0xFF5E0006).withOpacity(0.7), fontSize: 12),
+                  style: TextStyle(color: Color(0xFF063B5C).withOpacity(0.7), fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: 12),
@@ -511,7 +522,7 @@ void _addToCart(dynamic product) async {
                   width: 50,
                   height: 2,
                   decoration: BoxDecoration(
-                    color: Color(0xFF9B0F06),
+                    color: Color(0xFF07566B),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -534,7 +545,7 @@ void _addToCart(dynamic product) async {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF5E0006),
+                        color: Color(0xFF063B5C),
                       ),
                     ),
                   ),
@@ -668,7 +679,7 @@ Widget _buildWhyChooseUs() {
                               ? 21
                               : 19,
                       fontWeight: FontWeight.w800,
-                      color: const Color(0xFF5E0006),
+                      color: const Color(0xFF063B5C),
                       height: 1.2,
                     ),
                   ),
@@ -679,7 +690,7 @@ Widget _buildWhyChooseUs() {
                     width: 52,
                     height: 3,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF9B0F06),
+                      color: const Color(0xFF07566B),
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
@@ -691,7 +702,7 @@ Widget _buildWhyChooseUs() {
                     textAlign: TextAlign.center,
                     softWrap: true,
                     style: TextStyle(
-                      color: const Color(0xFF5E0006).withOpacity(0.65),
+                      color: const Color(0xFF063B5C).withOpacity(0.65),
                       fontSize: screenWidth >= 700 ? 13 : 11,
                       height: 1.4,
                       fontWeight: FontWeight.w400,
@@ -731,12 +742,12 @@ Widget _buildWhyChooseUs() {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: const Color(0xFF9B0F06)
+                                color: const Color(0xFF07566B)
                                     .withOpacity(0.09),
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF5E0006)
+                                  color: const Color(0xFF063B5C)
                                       .withOpacity(0.05),
                                   blurRadius: 14,
                                   spreadRadius: 0,
@@ -755,13 +766,13 @@ Widget _buildWhyChooseUs() {
                                 Container(
                                   padding: EdgeInsets.all(iconPadding),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF9B0F06)
+                                    color: const Color(0xFF07566B)
                                         .withOpacity(0.09),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
                                     feature['icon'] as IconData,
-                                    color: const Color(0xFF9B0F06),
+                                    color: const Color(0xFF07566B),
                                     size: iconSize,
                                   ),
                                 ),
@@ -784,7 +795,7 @@ Widget _buildWhyChooseUs() {
                                       style: const TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w800,
-                                        color: Color(0xFF5E0006),
+                                        color: Color(0xFF063B5C),
                                         height: 1.2,
                                       ),
                                     ),
@@ -801,7 +812,7 @@ Widget _buildWhyChooseUs() {
                                   textAlign: TextAlign.center,
                                   softWrap: true,
                                   style: TextStyle(
-                                    color: const Color(0xFF5E0006)
+                                    color: const Color(0xFF063B5C)
                                         .withOpacity(0.60),
                                     fontSize: descFontSize,
                                     fontWeight: FontWeight.w400,
@@ -822,12 +833,12 @@ Widget _buildWhyChooseUs() {
                                         screenWidth >= 700 ? 5 : 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF9B0F06)
+                                    color: const Color(0xFF07566B)
                                         .withOpacity(0.08),
                                     borderRadius:
                                         BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: const Color(0xFF9B0F06)
+                                      color: const Color(0xFF07566B)
                                           .withOpacity(0.16),
                                     ),
                                   ),
@@ -839,7 +850,7 @@ Widget _buildWhyChooseUs() {
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       color:
-                                          const Color(0xFF9B0F06),
+                                          const Color(0xFF07566B),
                                       fontSize: highlightFontSize,
                                       fontWeight: FontWeight.w800,
                                       height: 1.1,
@@ -883,7 +894,7 @@ Widget _buildWhyChooseUs() {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF5E0006),
+              color: Color(0xFF063B5C),
             ),
           ),
           SizedBox(height: 6),
@@ -891,7 +902,7 @@ Widget _buildWhyChooseUs() {
             width: 50,
             height: 2,
             decoration: BoxDecoration(
-              color: Color(0xFF9B0F06),
+              color: Color(0xFF07566B),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -903,29 +914,42 @@ Widget _buildWhyChooseUs() {
   }
 
   Widget _buildFaqItem(String question, String answer) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: EdgeInsets.only(bottom: 10),
+      child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          title: Text(
-            question,
-            style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF5E0006), fontSize: 13),
+        clipBehavior: Clip.antiAlias,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
           ),
-          children: [
-            Padding(
-              padding: EdgeInsets.all(14),
-              child: Text(
-                answer,
-                style: TextStyle(color: Color(0xFF5E0006).withOpacity(0.7), fontSize: 12),
+          child: Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              title: Text(
+                question,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF063B5C),
+                  fontSize: 13,
+                ),
               ),
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(14),
+                  child: Text(
+                    answer,
+                    style: TextStyle(
+                      color: Color(0xFF063B5C).withOpacity(0.7),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

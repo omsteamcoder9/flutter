@@ -8,6 +8,7 @@ import '../../widgets/bottom_nav_bar.dart';
 import '../../widgets/cart_drawer.dart';
 import 'profile/profile_screen.dart';
 import 'auth/signup_screen.dart';
+import 'contact_screen.dart';
 
 class PrivacyScreen extends StatefulWidget {
   const PrivacyScreen({super.key});
@@ -122,7 +123,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
         title: const Text(
           'Privacy Policy',
           style: TextStyle(
-            color: Color(0xFF5E0006),
+            color: Color(0xFF063B5C),
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -158,7 +159,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
               height: 40,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF9B0F06)),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF07566B)),
               ),
             ),
             SizedBox(height: 16),
@@ -180,7 +181,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
             ElevatedButton(
               onPressed: _loadPrivacy,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF9B0F06),
+                backgroundColor: const Color(0xFF07566B),
               ),
               child: const Text('Retry'),
             ),
@@ -200,35 +201,32 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
           Text(
             _privacy!.title,
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF5E0006),
+              color: Color(0xFF063B5C),
             ),
           ),
           const SizedBox(height: 8),
           
-          // Last Updated
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF9B0F06).withOpacity(0.1),
+              color: const Color(0xFF07566B).withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               'Last Updated: ${_privacy!.lastUpdated}',
               style: const TextStyle(
                 fontSize: 12,
-                color: Color(0xFF9B0F06),
+                color: Color(0xFF07566B),
               ),
             ),
           ),
           const SizedBox(height: 24),
           
-          // Version
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -238,14 +236,14 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, size: 20, color: Color(0xFF5E0006)),
+                const Icon(Icons.info_outline, size: 20, color: Color(0xFF063B5C)),
                 const SizedBox(width: 12),
                 Text(
                   'Version ${_privacy!.version}',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF5E0006),
+                    color: Color(0xFF063B5C),
                   ),
                 ),
               ],
@@ -253,7 +251,6 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           ),
           const SizedBox(height: 24),
           
-          // Introduction
           _buildSection(
             'Introduction',
             _privacy!.introduction,
@@ -261,7 +258,6 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           ),
           const SizedBox(height: 20),
           
-          // Information We Collect
           _buildListSection(
             'Information We Collect',
             _privacy!.dataCollection,
@@ -269,7 +265,6 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           ),
           const SizedBox(height: 20),
           
-          // How We Use Your Information
           _buildListSection(
             'How We Use Your Information',
             _privacy!.dataUsage,
@@ -277,7 +272,6 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           ),
           const SizedBox(height: 20),
           
-          // Information Sharing
           _buildListSection(
             'Information Sharing',
             _privacy!.dataSharing,
@@ -285,7 +279,6 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           ),
           const SizedBox(height: 20),
           
-          // Data Security
           _buildSection(
             'Data Security',
             _privacy!.dataSecurity,
@@ -293,7 +286,6 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           ),
           const SizedBox(height: 20),
           
-          // Your Rights
           _buildListSection(
             'Your Rights',
             _privacy!.userRights,
@@ -301,7 +293,6 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           ),
           const SizedBox(height: 20),
           
-          // Cookies
           _buildSection(
             'Cookies',
             _privacy!.cookies,
@@ -309,7 +300,6 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           ),
           const SizedBox(height: 20),
           
-          // Third-Party Links
           _buildSection(
             'Third-Party Links',
             _privacy!.thirdPartyLinks,
@@ -317,7 +307,6 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           ),
           const SizedBox(height: 20),
           
-          // Changes to This Policy
           _buildSection(
             'Changes to This Policy',
             _privacy!.policyChanges,
@@ -325,7 +314,6 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           ),
           const SizedBox(height: 20),
           
-          // Contact Us
           _buildSection(
             'Contact Us',
             _privacy!.contactInfo,
@@ -334,7 +322,6 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           
           const SizedBox(height: 30),
           
-          // Footer
           Center(
             child: Text(
               'We value your privacy and are committed to protecting your personal information.',
@@ -345,6 +332,40 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
               textAlign: TextAlign.center,
             ),
           ),
+
+          // ✅ CONTACT US BUTTON
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ContactScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.support_agent_outlined, color: Colors.white, size: 20),
+              label: const Text(
+                'Contact Us',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF063B5C),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+
           const SizedBox(height: 20),
         ],
       ),
@@ -359,7 +380,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
       children: [
         Row(
           children: [
-            Icon(icon, size: 22, color: const Color(0xFF9B0F06)),
+            Icon(icon, size: 22, color: const Color(0xFF07566B)),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -367,7 +388,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF5E0006),
+                  color: Color(0xFF063B5C),
                 ),
               ),
             ),
@@ -378,7 +399,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           width: 50,
           height: 2,
           decoration: BoxDecoration(
-            color: const Color(0xFF9B0F06),
+            color: const Color(0xFF07566B),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -403,7 +424,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
       children: [
         Row(
           children: [
-            Icon(icon, size: 22, color: const Color(0xFF9B0F06)),
+            Icon(icon, size: 22, color: const Color(0xFF07566B)),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -411,7 +432,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF5E0006),
+                  color: Color(0xFF063B5C),
                 ),
               ),
             ),
@@ -422,7 +443,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           width: 50,
           height: 2,
           decoration: BoxDecoration(
-            color: const Color(0xFF9B0F06),
+            color: const Color(0xFF07566B),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -436,7 +457,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
                 '• ',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Color(0xFF9B0F06),
+                  color: Color(0xFF07566B),
                   fontWeight: FontWeight.bold,
                 ),
               ),

@@ -8,6 +8,7 @@ import '../../widgets/bottom_nav_bar.dart';
 import '../../widgets/cart_drawer.dart';
 import 'profile/profile_screen.dart';
 import 'auth/signup_screen.dart';
+import 'contact_screen.dart';
 
 class TermsScreen extends StatefulWidget {
   const TermsScreen({super.key});
@@ -122,7 +123,7 @@ class _TermsScreenState extends State<TermsScreen> {
         title: const Text(
           'Terms & Conditions',
           style: TextStyle(
-            color: Color(0xFF5E0006),
+            color: Color(0xFF063B5C),
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -158,7 +159,7 @@ class _TermsScreenState extends State<TermsScreen> {
               height: 40,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF9B0F06)),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF07566B)),
               ),
             ),
             SizedBox(height: 16),
@@ -180,7 +181,7 @@ class _TermsScreenState extends State<TermsScreen> {
             ElevatedButton(
               onPressed: _loadTerms,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF9B0F06),
+                backgroundColor: const Color(0xFF07566B),
               ),
               child: const Text('Retry'),
             ),
@@ -200,35 +201,32 @@ class _TermsScreenState extends State<TermsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
           Text(
             _terms!.title,
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF5E0006),
+              color: Color(0xFF063B5C),
             ),
           ),
           const SizedBox(height: 8),
           
-          // Last Updated
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF9B0F06).withOpacity(0.1),
+              color: const Color(0xFF07566B).withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               'Last Updated: ${_terms!.lastUpdated}',
               style: const TextStyle(
                 fontSize: 12,
-                color: Color(0xFF9B0F06),
+                color: Color(0xFF07566B),
               ),
             ),
           ),
           const SizedBox(height: 24),
           
-          // Version
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -238,14 +236,14 @@ class _TermsScreenState extends State<TermsScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, size: 20, color: Color(0xFF5E0006)),
+                const Icon(Icons.info_outline, size: 20, color: Color(0xFF063B5C)),
                 const SizedBox(width: 12),
                 Text(
                   'Version ${_terms!.version}',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF5E0006),
+                    color: Color(0xFF063B5C),
                   ),
                 ),
               ],
@@ -253,7 +251,6 @@ class _TermsScreenState extends State<TermsScreen> {
           ),
           const SizedBox(height: 24),
           
-          // Important Notice
           _buildSection(
             'Important Notice',
             _terms!.importantNotice,
@@ -261,11 +258,9 @@ class _TermsScreenState extends State<TermsScreen> {
           ),
           const SizedBox(height: 20),
           
-          // User Requirements
           _buildRequirementsSection(),
           const SizedBox(height: 20),
           
-          // Main Sections
           ..._terms!.sections.map((section) => Padding(
             padding: const EdgeInsets.only(bottom: 20),
             child: _buildSection(
@@ -275,7 +270,6 @@ class _TermsScreenState extends State<TermsScreen> {
             ),
           )),
           
-          // Intellectual Property
           _buildSection(
             'Intellectual Property',
             _terms!.intellectualProperty,
@@ -283,7 +277,6 @@ class _TermsScreenState extends State<TermsScreen> {
           ),
           const SizedBox(height: 20),
           
-          // Limitation of Liability
           _buildSection(
             'Limitation of Liability',
             _terms!.limitationLiability,
@@ -291,7 +284,6 @@ class _TermsScreenState extends State<TermsScreen> {
           ),
           const SizedBox(height: 20),
           
-          // Changes to Terms
           _buildSection(
             'Changes to Terms',
             _terms!.changesNotice,
@@ -299,7 +291,6 @@ class _TermsScreenState extends State<TermsScreen> {
           ),
           const SizedBox(height: 20),
           
-          // Contact Information
           _buildSection(
             'Contact Information',
             _terms!.contactInfo,
@@ -308,7 +299,6 @@ class _TermsScreenState extends State<TermsScreen> {
           
           const SizedBox(height: 30),
           
-          // Footer
           Center(
             child: Text(
               'By using our service, you agree to these terms.',
@@ -319,6 +309,40 @@ class _TermsScreenState extends State<TermsScreen> {
               textAlign: TextAlign.center,
             ),
           ),
+
+          // ✅ CONTACT US BUTTON
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ContactScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.support_agent_outlined, color: Colors.white, size: 20),
+              label: const Text(
+                'Contact Us',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF063B5C),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+
           const SizedBox(height: 20),
         ],
       ),
@@ -333,7 +357,7 @@ class _TermsScreenState extends State<TermsScreen> {
       children: [
         Row(
           children: [
-            Icon(icon, size: 20, color: const Color(0xFF9B0F06)),
+            Icon(icon, size: 20, color: const Color(0xFF07566B)),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -341,7 +365,7 @@ class _TermsScreenState extends State<TermsScreen> {
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF5E0006),
+                  color: Color(0xFF063B5C),
                 ),
               ),
             ),
@@ -352,7 +376,7 @@ class _TermsScreenState extends State<TermsScreen> {
           width: 40,
           height: 3,
           decoration: BoxDecoration(
-            color: const Color(0xFF9B0F06),
+            color: const Color(0xFF07566B),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -377,7 +401,7 @@ class _TermsScreenState extends State<TermsScreen> {
       children: [
         Row(
           children: [
-            const Icon(Icons.verified_user_outlined, size: 20, color: Color(0xFF9B0F06)),
+            const Icon(Icons.verified_user_outlined, size: 20, color: Color(0xFF07566B)),
             const SizedBox(width: 8),
             const Expanded(
               child: Text(
@@ -385,7 +409,7 @@ class _TermsScreenState extends State<TermsScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF5E0006),
+                  color: Color(0xFF063B5C),
                 ),
               ),
             ),
@@ -396,7 +420,7 @@ class _TermsScreenState extends State<TermsScreen> {
           width: 40,
           height: 3,
           decoration: BoxDecoration(
-            color: const Color(0xFF9B0F06),
+            color: const Color(0xFF07566B),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -410,7 +434,7 @@ class _TermsScreenState extends State<TermsScreen> {
                 '• ',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Color(0xFF9B0F06),
+                  color: Color(0xFF07566B),
                   fontWeight: FontWeight.bold,
                 ),
               ),

@@ -28,8 +28,8 @@ class BottomNavBar extends StatelessWidget {
       child: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFF5E0006),
-        unselectedItemColor: const Color(0xFF5E0006).withOpacity(0.6),
+        selectedItemColor: const Color(0xFF063B5C),
+        unselectedItemColor: const Color(0xFF063B5C).withOpacity(0.6),
         selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         unselectedLabelStyle: const TextStyle(fontSize: 12),
         currentIndex: currentIndex,
@@ -52,7 +52,7 @@ class BottomNavBar extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(3),
                       decoration: const BoxDecoration(
-                        color: Color(0xFF5E0006),
+                        color: Color(0xFF063B5C),
                         shape: BoxShape.circle,
                       ),
                       constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
@@ -80,7 +80,7 @@ class BottomNavBar extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(3),
                       decoration: const BoxDecoration(
-                        color: Color(0xFFD53E0F),
+                        color: Color(0xFF28A8BA),
                         shape: BoxShape.circle,
                       ),
                       constraints: const BoxConstraints(minWidth: 14, minHeight: 14),

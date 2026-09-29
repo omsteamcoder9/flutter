@@ -416,7 +416,7 @@ class _ProductDetailScreenState
       const SnackBar(
         content: Text('Added to cart!'),
         duration: Duration(seconds: 1),
-        backgroundColor: Color(0xFF9B0F06),
+        backgroundColor: Color(0xFF07566B),
       ),
     );
 
@@ -641,7 +641,7 @@ class _ProductDetailScreenState
                 strokeWidth: 2,
                 valueColor:
                     AlwaysStoppedAnimation<Color>(
-                  Color(0xFF9B0F06),
+                  Color(0xFF07566B),
                 ),
               ),
             ),
@@ -673,7 +673,7 @@ class _ProductDetailScreenState
               style:
                   ElevatedButton.styleFrom(
                 backgroundColor:
-                    const Color(0xFF9B0F06),
+                    const Color(0xFF07566B),
               ),
               child:
                   const Text('Retry'),
@@ -757,7 +757,7 @@ class _ProductDetailScreenState
                     fontWeight:
                         FontWeight.bold,
                     color:
-                        Color(0xFF9B0F06),
+                        Color(0xFF07566B),
                   ),
                 ),
 
@@ -950,7 +950,7 @@ class _ProductDetailScreenState
                       border: Border.all(
                         color: isSelected
                             ? const Color(
-                                0xFF9B0F06,
+                                0xFF07566B,
                               )
                             : Colors.grey
                                 .shade300,
@@ -1073,10 +1073,10 @@ class _ProductDetailScreenState
                     BoxDecoration(
                   color: isSelected
                       ? const Color(
-                          0xFF9B0F06,
+                          0xFF07566B,
                         )
                       : const Color(
-                          0xFF5E0006,
+                          0xFF063B5C,
                         ),
                   borderRadius:
                       BorderRadius.circular(
@@ -1084,7 +1084,7 @@ class _ProductDetailScreenState
                   ),
                   border: Border.all(
                     color: const Color(
-                      0xFF9B0F06,
+                      0xFF07566B,
                     ),
                   ),
                 ),
@@ -1097,7 +1097,7 @@ class _ProductDetailScreenState
                     color: isSelected
                         ? Colors.white
                         : const Color(
-                            0xFFEED9B9,
+                            0xFFE0F0F5,
                           ),
                   ),
                 ),
@@ -1232,7 +1232,7 @@ class _ProductDetailScreenState
                 color: isOutOfStock
                     ? Colors.grey.shade400
                     : const Color(
-                        0xFF9B0F06,
+                        0xFF07566B,
                       ),
                 borderRadius:
                     BorderRadius.circular(
@@ -1389,7 +1389,7 @@ class _ProductDetailScreenState
             fontSize: 18,
             fontWeight:
                 FontWeight.bold,
-            color: Color(0xFF5E0006),
+            color: Color(0xFF063B5C),
           ),
         ),
 
@@ -1420,7 +1420,7 @@ class _ProductDetailScreenState
             fontSize: 18,
             fontWeight:
                 FontWeight.bold,
-            color: Color(0xFF5E0006),
+            color: Color(0xFF063B5C),
           ),
         ),
 
@@ -1441,7 +1441,7 @@ class _ProductDetailScreenState
                   style: TextStyle(
                     fontSize: 14,
                     color:
-                        Color(0xFF9B0F06),
+                        Color(0xFF07566B),
                     fontWeight:
                         FontWeight.bold,
                   ),
@@ -1478,7 +1478,7 @@ class _ProductDetailScreenState
             fontSize: 18,
             fontWeight:
                 FontWeight.bold,
-            color: Color(0xFF5E0006),
+            color: Color(0xFF063B5C),
           ),
         ),
 

@@ -786,7 +786,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
           'email': _emailController.text.trim(),
         },
         'theme': {
-          'color': '#D53E0F'
+          'color': '#07566B'
         }
       };
       
@@ -814,7 +814,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
       appBar: AppBar(
         title: Text(_isBuyNowMode ? 'Buy Now' : 'Checkout'),
         backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF5E0006),
+        foregroundColor: const Color(0xFF063B5C),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -829,13 +829,13 @@ void _handlePaymentError(PaymentFailureResponse response) {
                   margin: const EdgeInsets.only(bottom: 16),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF9B0F06).withOpacity(0.1),
+                    color: const Color(0xFF07566B).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFF9B0F06).withOpacity(0.3)),
+                    border: Border.all(color: const Color(0xFF07566B).withOpacity(0.3)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.flash_on, color: Color(0xFF9B0F06), size: 20),
+                      const Icon(Icons.flash_on, color: Color(0xFF07566B), size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -843,7 +843,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF5E0006),
+                            color: Color(0xFF063B5C),
                           ),
                         ),
                       ),
@@ -866,7 +866,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF5E0006),
+                        color: Color(0xFF063B5C),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -936,7 +936,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Shipping'),
-                        const Text('FREE', style: TextStyle(color: Color(0xFF5E0006))),
+                        const Text('FREE', style: TextStyle(color: Color(0xFF063B5C))),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -957,7 +957,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
                         ),
                         Text(
                           '₹${total.toInt()}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF5E0006)),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF063B5C)),
                         ),
                       ],
                     ),
@@ -979,7 +979,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF5E0006),
+                        color: Color(0xFF063B5C),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -995,8 +995,8 @@ void _handlePaymentError(PaymentFailureResponse response) {
                       isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Select Ward *',
-                        prefixIcon: const Icon(Icons.map, color: Color(0xFF5E0006)),
-                        suffixIcon: const Icon(Icons.arrow_drop_down, color: Color(0xFF5E0006)),
+                        prefixIcon: const Icon(Icons.map, color: Color(0xFF063B5C)),
+                        suffixIcon: const Icon(Icons.arrow_drop_down, color: Color(0xFF063B5C)),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(10)),
                           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1007,7 +1007,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
                         ),
                         focusedBorder: const OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(10)),
-                          borderSide: BorderSide(color: Color(0xFF5E0006)),
+                          borderSide: BorderSide(color: Color(0xFF063B5C)),
                         ),
                       ),
                       items: _wards.map((ward) {
@@ -1050,8 +1050,8 @@ void _handlePaymentError(PaymentFailureResponse response) {
                       isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Street Address *',
-                        prefixIcon: const Icon(Icons.location_on, color: Color(0xFF5E0006)),
-                        suffixIcon: const Icon(Icons.arrow_drop_down, color: Color(0xFF5E0006)),
+                        prefixIcon: const Icon(Icons.location_on, color: Color(0xFF063B5C)),
+                        suffixIcon: const Icon(Icons.arrow_drop_down, color: Color(0xFF063B5C)),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(10)),
                           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1062,7 +1062,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
                         ),
                         focusedBorder: const OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(10)),
-                          borderSide: BorderSide(color: Color(0xFF5E0006)),
+                          borderSide: BorderSide(color: Color(0xFF063B5C)),
                         ),
                       ),
                       items: _streetsForSelectedWard.map((street) {
@@ -1102,7 +1102,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
                       readOnly: true,
                       decoration: InputDecoration(
                         labelText: 'City *',
-                        prefixIcon: const Icon(Icons.location_city, color: Color(0xFF5E0006)),
+                        prefixIcon: const Icon(Icons.location_city, color: Color(0xFF063B5C)),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(10)),
                           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1113,7 +1113,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
                         ),
                         focusedBorder: const OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(10)),
-                          borderSide: BorderSide(color: Color(0xFF5E0006)),
+                          borderSide: BorderSide(color: Color(0xFF063B5C)),
                         ),
                         filled: true,
                         fillColor: Colors.grey.shade100,
@@ -1146,7 +1146,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF5E0006),
+                        color: Color(0xFF063B5C),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -1159,7 +1159,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
                           _paymentMethod = value!;
                         });
                       },
-                      activeColor: const Color(0xFF5E0006),
+                      activeColor: const Color(0xFF063B5C),
                     ),
                     RadioListTile<String>(
                       title: const Text('Razorpay (Card/UPI/NetBanking)'),
@@ -1170,7 +1170,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
                           _paymentMethod = value!;
                         });
                       },
-                      activeColor: const Color(0xFF5E0006),
+                      activeColor: const Color(0xFF063B5C),
                     ),
                   ],
                 ),
@@ -1198,7 +1198,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _placeOrder,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF5E0006),
+                    backgroundColor: const Color(0xFF063B5C),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -1252,7 +1252,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: const Color(0xFF5E0006)),
+        prefixIcon: Icon(icon, color: const Color(0xFF063B5C)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(10)),
           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1263,7 +1263,7 @@ void _handlePaymentError(PaymentFailureResponse response) {
         ),
         focusedBorder: const OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(10)),
-          borderSide: BorderSide(color: Color(0xFF5E0006)),
+          borderSide: BorderSide(color: Color(0xFF063B5C)),
         ),
       ),
       validator: (value) {

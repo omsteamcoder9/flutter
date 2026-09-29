@@ -122,7 +122,7 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF5E0006),
+                    color: Color(0xFF063B5C),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -146,9 +146,9 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFFDF8F5),
+                color: const Color(0xFFF0F9FC),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFF9B0F06).withOpacity(0.15)),
+                border: Border.all(color: const Color(0xFF07566B).withOpacity(0.15)),
               ),
               padding: const EdgeInsets.all(24),
               child: Column(
@@ -158,7 +158,7 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                   Icon(
                     Icons.format_quote,
                     size: 36,
-                    color: const Color(0xFF9B0F06).withOpacity(0.3),
+                    color: const Color(0xFF07566B).withOpacity(0.3),
                   ),
                   const SizedBox(height: 16),
                   
@@ -182,7 +182,7 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                             style: const TextStyle(
                               fontSize: 14,
                               height: 1.5,
-                              color: Color(0xFF5E0006),
+                              color: Color(0xFF063B5C),
                             ),
                           ),
                         );
@@ -203,7 +203,7 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF5E0006),
+                      color: Color(0xFF063B5C),
                     ),
                   ),
                   
@@ -214,7 +214,7 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                     _testimonials[_currentIndex]['location'],
                     style: TextStyle(
                       fontSize: 12,
-                      color: const Color(0xFF9B0F06),
+                      color: const Color(0xFF07566B),
                     ),
                   ),
                   
@@ -229,13 +229,13 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF9B0F06).withOpacity(0.1),
+                            color: const Color(0xFF07566B).withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
                             Icons.chevron_left,
                             size: 20,
-                            color: Color(0xFF5E0006),
+                            color: Color(0xFF063B5C),
                           ),
                         ),
                       ),
@@ -261,8 +261,8 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(3),
                                 color: _currentIndex == index
-                                    ? const Color(0xFF9B0F06)
-                                    : const Color(0xFF9B0F06).withOpacity(0.3),
+                                    ? const Color(0xFF07566B)
+                                    : const Color(0xFF07566B).withOpacity(0.3),
                               ),
                             ),
                           );
@@ -274,13 +274,13 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF9B0F06).withOpacity(0.1),
+                            color: const Color(0xFF07566B).withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
                             Icons.chevron_right,
                             size: 20,
-                            color: Color(0xFF5E0006),
+                            color: Color(0xFF063B5C),
                           ),
                         ),
                       ),
@@ -303,7 +303,7 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF5E0006),
+                    color: Color(0xFF063B5C),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -313,9 +313,9 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFDF8F5),
+                        color: const Color(0xFFF0F9FC),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF9B0F06).withOpacity(0.1)),
+                        border: Border.all(color: const Color(0xFF07566B).withOpacity(0.1)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,7 +327,7 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                               Icon(
                                 Icons.format_quote,
                                 size: 20,
-                                color: const Color(0xFF9B0F06).withOpacity(0.2),
+                                color: const Color(0xFF07566B).withOpacity(0.2),
                               ),
                             ],
                           ),
@@ -339,7 +339,7 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                             style: const TextStyle(
                               fontSize: 12,
                               height: 1.4,
-                              color: Color(0xFF5E0006),
+                              color: Color(0xFF063B5C),
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -348,7 +348,7 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF5E0006),
+                              color: Color(0xFF063B5C),
                             ),
                           ),
                         ],
