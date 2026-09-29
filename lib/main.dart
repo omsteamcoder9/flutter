@@ -882,8 +882,7 @@ Widget _buildWhyChooseUs() {
     final faqs = [
       {'q': 'How fresh is the sea fish you deliver?', 'a': 'Our sea fish is sourced daily from local fishermen and packed with ice. We ensure next-day delivery for maximum freshness.'},
       {'q': 'When will I receive my order?', 'a': 'We follow a next-day delivery policy. Orders placed today will be delivered tomorrow. This ensures you receive the freshest catch possible.'},
-      {'q': 'Is the fish cleaned and cut before delivery?', 'a': 'Yes, we provide fresh cleaned and cut fish as per your preference. You can choose whole fish, fillets, or curry cuts.'},
-    ];
+{'q': 'Is the fish cleaned and cut before delivery?', 'a': 'No, we do not clean or cut the fish before delivery. We deliver fresh whole fish so you receive it in its natural, unprocessed form.'},    ];
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),

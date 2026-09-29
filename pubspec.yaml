@@ -22,7 +22,10 @@ dependencies:
   sms_autofill: ^2.4.1
 
   http: ^1.6.0
-
+  google_places_flutter: ^2.1.0
+  google_maps_flutter: ^2.9.0
+  geolocator: ^13.0.1
+  geocoding: ^3.0.0
   flutter_dotenv: ^6.0.1
 
   carousel_slider: ^5.1.2
