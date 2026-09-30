@@ -434,7 +434,7 @@ class _FullScreenSearchModalState extends State<FullScreenSearchModal> {
                           ),
                           onSubmitted: (_) => _handleSearchSubmit(),
                           decoration: InputDecoration(
-                            hintText: 'Search products...',
+                            hintText: 'Search products',
                             hintStyle: TextStyle(
                               color: const Color(0xFFE0F0F5).withOpacity(0.6),
                               fontSize: 16,

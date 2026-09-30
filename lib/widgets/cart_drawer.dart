@@ -1,4 +1,5 @@
 // ========== FILE: lib/widgets/cart_drawer.dart ==========
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
@@ -9,6 +10,7 @@ import '../screens/auth/signup_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../screens/profile/profile_screen.dart';
+
 class CartScreen extends StatefulWidget {
   final VoidCallback onCartUpdate;
   final String? guestId;
@@ -26,9 +28,14 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  Map<String, dynamic> _cart = {'items': [], 'totalItems': 0, 'totalPrice': 0};
+  Map<String, dynamic> _cart = {
+    'items': [],
+    'totalItems': 0,
+    'totalPrice': 0,
+  };
+
   bool _isLoading = true;
-  List<String> _removingItems = [];
+  final List<String> _removingItems = [];
   int _currentIndex = 1;
 
   @override
@@ -40,130 +47,350 @@ class _CartScreenState extends State<CartScreen> {
 
   Future<void> _clearBuyNowOrder() async {
     final prefs = await SharedPreferences.getInstance();
+
     await prefs.remove('buy_now_order');
     await prefs.remove('pending_checkout');
   }
 
   Future<void> _loadCart() async {
     try {
-      final response = await ApiService.getCart(guestId: widget.guestId, token: widget.token);
+      final response = await ApiService.getCart(
+        guestId: widget.guestId,
+        token: widget.token,
+      );
+
+      if (!mounted) return;
+
       setState(() {
         if (response['success'] == true) {
-          _cart = response['data'] ?? {'items': [], 'totalItems': 0, 'totalPrice': 0};
+          _cart = response['data'] ??
+              {
+                'items': [],
+                'totalItems': 0,
+                'totalPrice': 0,
+              };
         }
+
         _isLoading = false;
       });
+
+      // Keep bottom cart count synchronized
+      final cartProvider = Provider.of<CartProvider>(
+        context,
+        listen: false,
+      );
+
+      cartProvider.updateCartCount(
+        (_cart['totalItems'] ?? 0) as int,
+      );
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _isLoading = false;
       });
     }
   }
 
-Future<void> _updateQuantity(String itemId, int quantity) async {
-  if (quantity < 1) return;
-  
-  // ✅ Update UI instantly
-  setState(() {
-    final itemIndex = _cart['items'].indexWhere((item) => item['_id'] == itemId);
-    if (itemIndex != -1) {
-      final item = _cart['items'][itemIndex];
-      final oldQty = item['quantity'];
-      final price = item['price'];
-      
-      item['quantity'] = quantity;
-      _cart['totalItems'] = (_cart['totalItems'] ?? 0) - oldQty + quantity;
-      _cart['totalPrice'] = (_cart['totalPrice'] ?? 0) - (price * oldQty) + (price * quantity);
-    }
-  });
-  widget.onCartUpdate();
-  
-  // ✅ Send API in background
-  try {
-    await ApiService.updateCartItem(itemId, quantity, guestId: widget.guestId, token: widget.token);
-    widget.onCartUpdate();
-  } catch (e) {
-    _loadCart();
-    widget.onCartUpdate();
-  }
-}
-Future<void> _removeItem(String itemId) async {
-  // ✅ Update UI instantly
-  setState(() {
-    _cart['items'] = _cart['items'].where((item) => item['_id'] != itemId).toList();
-    _cart['totalItems'] = (_cart['totalItems'] ?? 0) - 1;
-  });
-  widget.onCartUpdate();
-  
-  // ✅ Send API in background
-  try {
-    await ApiService.removeCartItem(itemId, guestId: widget.guestId, token: widget.token);
-    widget.onCartUpdate();
-  } catch (e) {
-    _loadCart();
-    widget.onCartUpdate();
-  }
-}
+  // ============================================================
+  // UPDATE QUANTITY
+  // ============================================================
 
-Future<void> _clearCart() async {
-  // ✅ Update UI instantly (count becomes 0 immediately)
-  setState(() {
-    _cart = {'items': [], 'totalItems': 0, 'totalPrice': 0};
-  });
-  
-  // ✅ Also update the CartProvider's count instantly
-  final cartProvider = Provider.of<CartProvider>(context, listen: false);
-  cartProvider.updateCartCount(0);  // ← You need to add this method
-  
-  // ❌ REMOVE this line - it's causing the issue
-  // widget.onCartUpdate();
-  
-  // ✅ Send API in background
-  try {
-    await ApiService.clearCart(guestId: widget.guestId, token: widget.token);
-    // Confirm with API after success
+  Future<void> _updateQuantity(
+    String itemId,
+    int quantity,
+  ) async {
+    if (quantity < 1) return;
+
+    double newTotalPrice = 0;
+    int newTotalItems = 0;
+
+    // Update UI instantly
+    setState(() {
+      final items = _cart['items'] as List;
+
+      final itemIndex = items.indexWhere(
+        (item) => item['_id'] == itemId,
+      );
+
+      if (itemIndex != -1) {
+        final item = items[itemIndex];
+
+        final oldQty = (item['quantity'] ?? 1) as int;
+        final price = (item['price'] ?? 0).toDouble();
+
+        item['quantity'] = quantity;
+
+        final oldTotalPrice =
+            ((_cart['totalPrice'] ?? 0).toDouble());
+
+        final updatedTotalPrice =
+            oldTotalPrice -
+            (price * oldQty) +
+            (price * quantity);
+
+        final updatedTotalItems =
+            ((_cart['totalItems'] ?? 0) as int) -
+            oldQty +
+            quantity;
+
+        _cart['totalPrice'] = updatedTotalPrice;
+        _cart['totalItems'] = updatedTotalItems;
+
+        newTotalPrice = updatedTotalPrice;
+        newTotalItems = updatedTotalItems;
+      }
+    });
+
+    // Update bottom navigation cart count immediately
+    final cartProvider = Provider.of<CartProvider>(
+      context,
+      listen: false,
+    );
+
+    cartProvider.updateCartCount(newTotalItems);
+
     widget.onCartUpdate();
-  } catch (e) {
-    // If failed, reload to revert
-    _loadCart();
-    widget.onCartUpdate();
+
+    // Send API request in background
+    try {
+      await ApiService.updateCartItem(
+        itemId,
+        quantity,
+        guestId: widget.guestId,
+        token: widget.token,
+      );
+
+      if (!mounted) return;
+
+      widget.onCartUpdate();
+    } catch (e) {
+      // If API fails, reload the original cart
+      await _loadCart();
+
+      if (mounted) {
+        widget.onCartUpdate();
+      }
+    }
   }
-}
+
+  // ============================================================
+  // REMOVE ITEM
+  // ============================================================
+
+  Future<void> _removeItem(String itemId) async {
+    double removedPrice = 0;
+    int removedQuantity = 0;
+
+    // Find the item before removing it
+    final items = _cart['items'] as List;
+
+    final itemIndex = items.indexWhere(
+      (item) => item['_id'] == itemId,
+    );
+
+    if (itemIndex == -1) return;
+
+    final item = items[itemIndex];
+
+    removedPrice = (item['price'] ?? 0).toDouble();
+    removedQuantity = (item['quantity'] ?? 1) as int;
+
+    final totalToRemove = removedPrice * removedQuantity;
+
+    int updatedTotalItems =
+        ((_cart['totalItems'] ?? 0) as int) -
+        removedQuantity;
+
+    double updatedTotalPrice =
+        (_cart['totalPrice'] ?? 0).toDouble() -
+        totalToRemove;
+
+    // Prevent negative values
+    if (updatedTotalItems < 0) {
+      updatedTotalItems = 0;
+    }
+
+    if (updatedTotalPrice < 0) {
+      updatedTotalPrice = 0;
+    }
+
+    // Add loading state
+    setState(() {
+      _removingItems.add(itemId);
+
+      // Remove item from UI
+      _cart['items'] = items
+          .where((item) => item['_id'] != itemId)
+          .toList();
+
+      // IMPORTANT:
+      // Update total item count
+      _cart['totalItems'] = updatedTotalItems;
+
+      // IMPORTANT:
+      // Update subtotal / total price
+      _cart['totalPrice'] = updatedTotalPrice;
+    });
+
+    // Update bottom navigation count immediately
+    final cartProvider = Provider.of<CartProvider>(
+      context,
+      listen: false,
+    );
+
+    cartProvider.updateCartCount(updatedTotalItems);
+
+    widget.onCartUpdate();
+
+    // Send delete request to API
+    try {
+      await ApiService.removeCartItem(
+        itemId,
+        guestId: widget.guestId,
+        token: widget.token,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _removingItems.remove(itemId);
+      });
+
+      widget.onCartUpdate();
+    } catch (e) {
+      if (!mounted) return;
+
+      // API failed.
+      // Reload cart from server to restore correct values.
+      setState(() {
+        _removingItems.remove(itemId);
+      });
+
+      await _loadCart();
+
+      if (mounted) {
+        widget.onCartUpdate();
+      }
+    }
+  }
+
+  // ============================================================
+  // CLEAR CART
+  // ============================================================
+
+  Future<void> _clearCart() async {
+    // Update UI instantly
+    setState(() {
+      _cart = {
+        'items': [],
+        'totalItems': 0,
+        'totalPrice': 0,
+      };
+    });
+
+    // Update CartProvider instantly
+    final cartProvider = Provider.of<CartProvider>(
+      context,
+      listen: false,
+    );
+
+    cartProvider.updateCartCount(0);
+
+    // Send request to server
+    try {
+      await ApiService.clearCart(
+        guestId: widget.guestId,
+        token: widget.token,
+      );
+
+      if (!mounted) return;
+
+      widget.onCartUpdate();
+    } catch (e) {
+      // If API fails, restore cart from server
+      await _loadCart();
+
+      if (mounted) {
+        widget.onCartUpdate();
+      }
+    }
+  }
+
+  // ============================================================
+  // PRICE FORMAT
+  // ============================================================
+
   String _formatPrice(double price) {
     return '₹${price.toStringAsFixed(0)}';
   }
 
+  // ============================================================
+  // AUTH
+  // ============================================================
+
   void _showAuthDialog() {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+    final authProvider = Provider.of<AuthProvider>(
+      context,
+      listen: false,
+    );
+
     if (authProvider.isLoggedIn) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => ProfileScreen()),
+        MaterialPageRoute(
+          builder: (context) => ProfileScreen(),
+        ),
       );
     } else {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const SignupScreen()),
+        MaterialPageRoute(
+          builder: (context) => const SignupScreen(),
+        ),
       );
     }
   }
 
+  // ============================================================
+  // HOME
+  // ============================================================
+
   void _navigateToHome() {
-    Navigator.popUntil(context, (route) => route.isFirst);
+    Navigator.popUntil(
+      context,
+      (route) => route.isFirst,
+    );
   }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
     final items = _cart['items'] ?? [];
-    final itemCount = _cart['totalItems'] ?? 0;
-    final subtotal = (_cart['totalPrice'] ?? 0).toDouble();
+
+    final itemCount =
+        (_cart['totalItems'] ?? 0) as int;
+
+    final subtotal =
+        (_cart['totalPrice'] ?? 0).toDouble();
+
     final tax = subtotal * 0.05;
+
     final total = subtotal + tax;
-    final cartCount = Provider.of<CartProvider>(context).cartCount;
+
+    final cartCount =
+        Provider.of<CartProvider>(context).cartCount;
 
     return Scaffold(
       backgroundColor: Colors.white,
+
+      // ========================================================
+      // APP BAR
+      // ========================================================
+
       appBar: AppBar(
         title: Text(
           'My Cart ($itemCount)',
@@ -175,54 +402,99 @@ Future<void> _clearCart() async {
         ),
         backgroundColor: Colors.white,
         elevation: 1,
+
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF063B5C)),
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Color(0xFF063B5C),
+          ),
           onPressed: () => Navigator.pop(context),
         ),
+
         actions: [
           if (items.isNotEmpty)
             TextButton(
               onPressed: _clearCart,
               child: const Text(
                 'Clear All',
-                style: TextStyle(color: Colors.red, fontSize: 14),
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 14,
+                ),
               ),
             ),
         ],
       ),
+
+      // ========================================================
+      // BODY
+      // ========================================================
+
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF07566B)),
+                valueColor:
+                    AlwaysStoppedAnimation<Color>(
+                  Color(0xFF07566B),
+                ),
               ),
             )
           : items.isEmpty
               ? Center(
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment:
+                        MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.shopping_bag_outlined, size: 80, color: Colors.grey.shade300),
+                      Icon(
+                        Icons.shopping_bag_outlined,
+                        size: 80,
+                        color: Colors.grey.shade300,
+                      ),
+
                       const SizedBox(height: 16),
+
                       Text(
                         'Your cart is empty',
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 16,
+                        ),
                       ),
+
                       const SizedBox(height: 8),
+
                       Text(
                         'Add items to get started',
-                        style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                        style: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 14,
+                        ),
                       ),
+
                       const SizedBox(height: 24),
+
                       ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () =>
+                            Navigator.pop(context),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF063B5C),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          backgroundColor:
+                              const Color(0xFF063B5C),
+                          padding:
+                              const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape:
+                              RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(8),
+                          ),
                         ),
                         child: const Text(
                           'Continue Shopping',
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ],
@@ -230,151 +502,381 @@ Future<void> _clearCart() async {
                 )
               : SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
+
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+
                     children: [
-                      // Cart Items List
+                      // ==================================================
+                      // CART ITEMS
+                      // ==================================================
+
                       ListView.builder(
                         shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
+                        physics:
+                            const NeverScrollableScrollPhysics(),
                         itemCount: items.length,
-                        itemBuilder: (context, index) {
-                          final item = items[index];
-                          final itemId = item['_id'];
-                          final product = item['product'];
-                          final productName = product is Map ? product['name'] : item['productName'];
-                          final price = (item['price'] ?? 0).toDouble();
-                          final quantity = item['quantity'] ?? 1;
-                          final variantName = item['variantName'];
-                          final isRemoving = _removingItems.contains(itemId);
 
-                          // ✅ FIXED — Build R2 image URL properly
+                        itemBuilder:
+                            (context, index) {
+                          final item = items[index];
+
+                          final itemId =
+                              item['_id'];
+
+                          final product =
+                              item['product'];
+
+                          final productName =
+                              product is Map
+                                  ? product['name']
+                                  : item['productName'];
+
+                          final price =
+                              (item['price'] ?? 0)
+                                  .toDouble();
+
+                          final quantity =
+                              item['quantity'] ?? 1;
+
+                          final variantName =
+                              item['variantName'];
+
+                          final isRemoving =
+                              _removingItems
+                                  .contains(itemId);
+
+                          // ==================================================
+                          // IMAGE URL
+                          // ==================================================
+
                           String imageUrl = '';
-                          if (item['productImage'] != null && item['productImage'].toString().isNotEmpty) {
-                            String imagePath = item['productImage'].toString();
-                            if (imagePath.startsWith('http')) {
+
+                          if (item['productImage'] !=
+                                  null &&
+                              item['productImage']
+                                  .toString()
+                                  .isNotEmpty) {
+                            String imagePath =
+                                item['productImage']
+                                    .toString();
+
+                            if (imagePath
+                                .startsWith('http')) {
                               imageUrl = imagePath;
                             } else {
-                              if (imagePath.startsWith('/')) {
-                                imagePath = imagePath.substring(1);
+                              if (imagePath
+                                  .startsWith('/')) {
+                                imagePath =
+                                    imagePath.substring(
+                                  1,
+                                );
                               }
-                              imageUrl = '${ApiService.imageBaseUrl}/$imagePath';
+
+                              imageUrl =
+                                  '${ApiService.imageBaseUrl}/$imagePath';
                             }
                           }
 
+                          // ==================================================
+                          // PRODUCT CARD
+                          // ==================================================
+
                           return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
+                            margin:
+                                const EdgeInsets.only(
+                              bottom: 12,
+                            ),
+
+                            padding:
+                                const EdgeInsets.all(12),
+
+                            decoration:
+                                BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade200),
+                              borderRadius:
+                                  BorderRadius.circular(
+                                12,
+                              ),
+                              border: Border.all(
+                                color:
+                                    Colors.grey.shade200,
+                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.grey.shade100,
+                                  color:
+                                      Colors.grey.shade100,
                                   blurRadius: 4,
-                                  offset: const Offset(0, 2),
+                                  offset:
+                                      const Offset(0, 2),
                                 ),
                               ],
                             ),
+
                             child: Row(
                               children: [
+                                // ==========================================
+                                // PRODUCT IMAGE
+                                // ==========================================
+
                                 Container(
                                   width: 80,
                                   height: 80,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(8),
+
+                                  decoration:
+                                      BoxDecoration(
+                                    color:
+                                        Colors.grey.shade100,
+                                    borderRadius:
+                                        BorderRadius.circular(
+                                      8,
+                                    ),
                                   ),
+
                                   child: imageUrl.isNotEmpty
                                       ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: Image.network(
+                                          borderRadius:
+                                              BorderRadius
+                                                  .circular(
+                                            8,
+                                          ),
+
+                                          child:
+                                              Image.network(
                                             imageUrl,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => Icon(Icons.image, color: Colors.grey.shade400, size: 40),
+
+                                            errorBuilder:
+                                                (
+                                              _,
+                                              __,
+                                              ___,
+                                            ) =>
+                                                    Icon(
+                                              Icons.image,
+                                              color: Colors
+                                                  .grey
+                                                  .shade400,
+                                              size: 40,
+                                            ),
                                           ),
                                         )
-                                      : Icon(Icons.image, color: Colors.grey.shade400, size: 40),
+                                      : Icon(
+                                          Icons.image,
+                                          color: Colors
+                                              .grey
+                                              .shade400,
+                                          size: 40,
+                                        ),
                                 ),
+
                                 const SizedBox(width: 12),
+
+                                // ==========================================
+                                // PRODUCT DETAILS
+                                // ==========================================
+
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment
+                                            .start,
+
                                     children: [
                                       Text(
-                                        productName ?? 'Product',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
+                                        productName ??
+                                            'Product',
+
+                                        style:
+                                            const TextStyle(
+                                          fontWeight:
+                                              FontWeight.w600,
                                           fontSize: 15,
                                         ),
+
                                         maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                                        overflow:
+                                            TextOverflow
+                                                .ellipsis,
                                       ),
-                                      if (variantName != null && variantName.isNotEmpty)
+
+                                      if (variantName !=
+                                              null &&
+                                          variantName
+                                              .isNotEmpty)
                                         Text(
                                           variantName,
-                                          style: TextStyle(
+
+                                          style:
+                                              const TextStyle(
                                             fontSize: 12,
-                                            color: Color(0xFF063B5C),
+                                            color: Color(
+                                              0xFF063B5C,
+                                            ),
                                           ),
                                         ),
-                                      const SizedBox(height: 6),
+
+                                      const SizedBox(
+                                        height: 6,
+                                      ),
+
                                       Text(
-                                        _formatPrice(price),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
+                                        _formatPrice(
+                                          price,
+                                        ),
+
+                                        style:
+                                            const TextStyle(
+                                          fontWeight:
+                                              FontWeight.bold,
                                           fontSize: 16,
-                                          color: Color(0xFF063B5C),
+                                          color: Color(
+                                            0xFF063B5C,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
+
+                                // ==========================================
+                                // QUANTITY + DELETE
+                                // ==========================================
+
                                 Column(
                                   children: [
                                     Row(
                                       children: [
                                         GestureDetector(
-                                          onTap: () => _updateQuantity(itemId, quantity - 1),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(6),
-                                            decoration: BoxDecoration(
-                                              border: Border.all(color: Colors.grey.shade300),
-                                              borderRadius: BorderRadius.circular(6),
+                                          onTap: () =>
+                                              _updateQuantity(
+                                            itemId,
+                                            quantity - 1,
+                                          ),
+
+                                          child:
+                                              Container(
+                                            padding:
+                                                const EdgeInsets
+                                                    .all(
+                                              6,
                                             ),
-                                            child: const Icon(Icons.remove, size: 18),
+
+                                            decoration:
+                                                BoxDecoration(
+                                              border:
+                                                  Border.all(
+                                                color: Colors
+                                                    .grey
+                                                    .shade300,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius
+                                                      .circular(
+                                                6,
+                                              ),
+                                            ),
+
+                                            child:
+                                                const Icon(
+                                              Icons.remove,
+                                              size: 18,
+                                            ),
                                           ),
                                         ),
-                                        const SizedBox(width: 12),
-                                        Text(
-                                          quantity.toString(),
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+
+                                        const SizedBox(
+                                          width: 12,
                                         ),
-                                        const SizedBox(width: 12),
+
+                                        Text(
+                                          quantity
+                                              .toString(),
+
+                                          style:
+                                              const TextStyle(
+                                            fontWeight:
+                                                FontWeight
+                                                    .bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+
+                                        const SizedBox(
+                                          width: 12,
+                                        ),
+
                                         GestureDetector(
-                                          onTap: () => _updateQuantity(itemId, quantity + 1),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(6),
-                                            decoration: BoxDecoration(
-                                              border: Border.all(color: Colors.grey.shade300),
-                                              borderRadius: BorderRadius.circular(6),
+                                          onTap: () =>
+                                              _updateQuantity(
+                                            itemId,
+                                            quantity + 1,
+                                          ),
+
+                                          child:
+                                              Container(
+                                            padding:
+                                                const EdgeInsets
+                                                    .all(
+                                              6,
                                             ),
-                                            child: const Icon(Icons.add, size: 18),
+
+                                            decoration:
+                                                BoxDecoration(
+                                              border:
+                                                  Border.all(
+                                                color: Colors
+                                                    .grey
+                                                    .shade300,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius
+                                                      .circular(
+                                                6,
+                                              ),
+                                            ),
+
+                                            child:
+                                                const Icon(
+                                              Icons.add,
+                                              size: 18,
+                                            ),
                                           ),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 12),
+
+                                    const SizedBox(
+                                      height: 12,
+                                    ),
+
                                     GestureDetector(
-                                      onTap: () => _removeItem(itemId),
+                                      onTap: isRemoving
+                                          ? null
+                                          : () =>
+                                              _removeItem(
+                                            itemId,
+                                          ),
+
                                       child: isRemoving
                                           ? const SizedBox(
                                               width: 20,
                                               height: 20,
-                                              child: CircularProgressIndicator(strokeWidth: 2),
+
+                                              child:
+                                                  CircularProgressIndicator(
+                                                strokeWidth:
+                                                    2,
+                                              ),
                                             )
-                                          : const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                                          : const Icon(
+                                              Icons
+                                                  .delete_outline,
+                                              size: 20,
+                                              color:
+                                                  Colors.red,
+                                            ),
                                     ),
                                   ],
                                 ),
@@ -383,97 +885,238 @@ Future<void> _clearCart() async {
                           );
                         },
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
-                      // Price Summary Section
+
+                      // ==================================================
+                      // PRICE SUMMARY
+                      // ==================================================
+
                       Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
+                        padding:
+                            const EdgeInsets.all(16),
+
+                        decoration:
+                            BoxDecoration(
                           color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius:
+                              BorderRadius.circular(12),
                         ),
+
                         child: Column(
                           children: [
+                            // SUBTOTAL
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment:
+                                  MainAxisAlignment
+                                      .spaceBetween,
+
                               children: [
-                                const Text('Subtotal', style: TextStyle(fontSize: 15)),
-                                Text(_formatPrice(subtotal), style: const TextStyle(fontSize: 15)),
+                                const Text(
+                                  'Subtotal',
+                                  style:
+                                      TextStyle(
+                                    fontSize: 15,
+                                  ),
+                                ),
+
+                                Text(
+                                  _formatPrice(
+                                    subtotal,
+                                  ),
+
+                                  style:
+                                      const TextStyle(
+                                    fontSize: 15,
+                                  ),
+                                ),
                               ],
                             ),
+
                             const SizedBox(height: 10),
+
+                            // SHIPPING
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment:
+                                  MainAxisAlignment
+                                      .spaceBetween,
+
                               children: [
-                                const Text('Shipping', style: TextStyle(fontSize: 15)),
-                                const Text('FREE', style: TextStyle(fontSize: 15, color: Color(0xFF28A8BA), fontWeight: FontWeight.w500)),
+                                const Text(
+                                  'Shipping',
+                                  style:
+                                      TextStyle(
+                                    fontSize: 15,
+                                  ),
+                                ),
+
+                                const Text(
+                                  'FREE',
+                                  style:
+                                      TextStyle(
+                                    fontSize: 15,
+                                    color:
+                                        Color(0xFF28A8BA),
+                                    fontWeight:
+                                        FontWeight.w500,
+                                  ),
+                                ),
                               ],
                             ),
+
                             const SizedBox(height: 10),
+
+                            // TAX
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment:
+                                  MainAxisAlignment
+                                      .spaceBetween,
+
                               children: [
-                                const Text('Tax (5%)', style: TextStyle(fontSize: 15)),
-                                Text(_formatPrice(tax), style: const TextStyle(fontSize: 15)),
+                                const Text(
+                                  'Tax (5%)',
+                                  style:
+                                      TextStyle(
+                                    fontSize: 15,
+                                  ),
+                                ),
+
+                                Text(
+                                  _formatPrice(tax),
+
+                                  style:
+                                      const TextStyle(
+                                    fontSize: 15,
+                                  ),
+                                ),
                               ],
                             ),
-                            const Divider(height: 24, thickness: 1),
+
+                            const Divider(
+                              height: 24,
+                              thickness: 1,
+                            ),
+
+                            // TOTAL
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment:
+                                  MainAxisAlignment
+                                      .spaceBetween,
+
                               children: [
-                                const Text('Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                Text(_formatPrice(total), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF063B5C))),
+                                const Text(
+                                  'Total',
+
+                                  style:
+                                      TextStyle(
+                                    fontSize: 18,
+                                    fontWeight:
+                                        FontWeight.bold,
+                                  ),
+                                ),
+
+                                Text(
+                                  _formatPrice(total),
+
+                                  style:
+                                      const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight:
+                                        FontWeight.bold,
+                                    color:
+                                        Color(0xFF063B5C),
+                                  ),
+                                ),
                               ],
                             ),
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
-                      // Proceed to Checkout Button
+
+                      // ==================================================
+                      // CHECKOUT BUTTON
+                      // ==================================================
+
                       SizedBox(
                         width: double.infinity,
+
                         child: ElevatedButton(
                           onPressed: () async {
-                            // ✅ Clear buy now order before proceeding to checkout
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.remove('buy_now_order');
-                            await prefs.remove('pending_checkout');
-                            
-                            final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                            
-                            if (authProvider.isLoggedIn) {
+                            final prefs =
+                                await SharedPreferences
+                                    .getInstance();
+
+                            await prefs.remove(
+                              'buy_now_order',
+                            );
+
+                            await prefs.remove(
+                              'pending_checkout',
+                            );
+
+                            final authProvider =
+                                Provider.of<AuthProvider>(
+                              context,
+                              listen: false,
+                            );
+
+                            if (authProvider
+                                .isLoggedIn) {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => CheckoutScreen(
+                                  builder: (context) =>
+                                      CheckoutScreen(
                                     guestId: null,
-                                    onOrderPlaced: widget.onCartUpdate,
+                                    onOrderPlaced:
+                                        widget
+                                            .onCartUpdate,
                                   ),
                                 ),
                               );
                             } else {
-                              await prefs.setBool('pending_checkout', true);
-                              
+                              await prefs.setBool(
+                                'pending_checkout',
+                                true,
+                              );
+
                               await Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => SignupScreen(guestId: widget.guestId),
+                                  builder: (context) =>
+                                      SignupScreen(
+                                    guestId:
+                                        widget.guestId,
+                                  ),
                                 ),
                               );
-                              
-                              if (authProvider.isLoggedIn) {
-                                final hasPendingCheckout = prefs.getBool('pending_checkout') ?? false;
+
+                              if (authProvider
+                                  .isLoggedIn) {
+                                final hasPendingCheckout =
+                                    prefs.getBool(
+                                          'pending_checkout',
+                                        ) ??
+                                        false;
+
                                 if (hasPendingCheckout) {
-                                  await prefs.remove('pending_checkout');
-                                  Navigator.pushReplacement(
+                                  await prefs.remove(
+                                    'pending_checkout',
+                                  );
+
+                                  Navigator
+                                      .pushReplacement(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => CheckoutScreen(
+                                      builder:
+                                          (context) =>
+                                              CheckoutScreen(
                                         guestId: null,
-                                        onOrderPlaced: widget.onCartUpdate,
+                                        onOrderPlaced:
+                                            widget
+                                                .onCartUpdate,
                                       ),
                                     ),
                                   );
@@ -481,31 +1124,53 @@ Future<void> _clearCart() async {
                               }
                             }
                           },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF063B5C),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+
+                          style:
+                              ElevatedButton.styleFrom(
+                            backgroundColor:
+                                const Color(0xFF063B5C),
+
+                            padding:
+                                const EdgeInsets.symmetric(
+                              vertical: 16,
+                            ),
+
+                            shape:
+                                RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(
+                                12,
+                              ),
                             ),
                           ),
+
                           child: const Text(
                             'Proceed to Checkout',
-                            style: TextStyle(
+
+                            style:
+                                TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontWeight:
+                                  FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 16),
                     ],
                   ),
                 ),
+
+      // ==========================================================
+      // BOTTOM NAVIGATION
+      // ==========================================================
+
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
         cartCount: cartCount,
+
         onTap: (index) {
           if (index == 0) {
             _navigateToHome();
@@ -514,6 +1179,7 @@ Future<void> _clearCart() async {
           } else if (index == 2) {
             _showAuthDialog();
           }
+
           setState(() {
             _currentIndex = index;
           });
